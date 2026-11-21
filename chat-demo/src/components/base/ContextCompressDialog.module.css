@@ -1,0 +1,11 @@
+/* 上下文用满的提示弹窗：一句提问 + 一段补充说明 */
+.ask {
+  margin: 0;
+}
+
+.note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+}

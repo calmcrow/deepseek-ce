@@ -1,0 +1,40 @@
+# ===================================================
+#  统一换行符
+#  源码一律存 LF:Windows 上一旦有 CRLF,每改一行
+#  diff 就会显示"整个文件都变了",而且 Linux/macOS
+#  协作者拉下来会看到 "^M" 乱码
+# ===================================================
+* text=auto eol=lf
+
+# Windows 脚本必须保留 CRLF,否则 cmd 会报错
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# ===================================================
+#  二进制文件:禁止任何换行转换,否则文件损坏
+# ===================================================
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.jar   binary
+*.apk   binary
+*.zip   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+
+# ===================================================
+#  构建产物标记为"生成文件"
+#  这样 GitHub 不会把 4.2MB 压缩后的 JS 算进语言统计,
+#  否则仓库首页会显示成"90% JavaScript"的误导性结果
+# ===================================================
+pnpm-lock.yaml                    linguist-generated=true
+android/app/src/main/assets/www/** linguist-generated=true
+
+# 测试截图:折叠在 diff 里,不占版面
+tools/*.png linguist-documentation=true

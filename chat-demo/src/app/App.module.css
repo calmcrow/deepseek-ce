@@ -1,0 +1,72 @@
+.frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  background-color: var(--dsw-alias-bg-base);
+}
+
+.main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.saveError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--dsw-alias-label-primary);
+  background-color: var(--dsw-alias-bg-base);
+  font-size: 14px;
+}
+
+.loadingView {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.loadingState {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+
+@media not all and (min-width: 768px) {
+  .frame {
+    position: fixed;
+    /* 视口高度是物理像素，界面缩放后要按倍数折回，否则底部会被挤出屏幕 */
+    top: calc(var(--app-viewport-top, 0px) / var(--ds-zoom, 1));
+    bottom: auto;
+    /*
+      老内核（Chromium < 108）不认 dvh。注意不能用「先写 vh、再写 dvh」的写法兜底：
+      带 var() 的声明在解析期是合法的，替换后才发现 100dvh 非法，此时按规范属性变成
+      unset（auto），并不会回退到上一条 height —— 实测确认会塌成 0 高。
+      dvh 必须放进 @supports，老内核整块跳过。
+    */
+    height: calc(100vh / var(--ds-zoom, 1));
+    @supports (height: 100dvh) {
+      height: calc(var(--app-viewport-height, 100dvh) / var(--ds-zoom, 1));
+    }
+  }
+}

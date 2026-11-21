@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 拍照结果先落到缓存目录，再通过 FileProvider 交给系统相机写 -->
+    <cache-path
+        name="capture"
+        path="capture/" />
+    <cache-path
+        name="picked"
+        path="picked/" />
+    <!-- 从链接下载的归档先落这里，再通过 FileProvider 交给网页的导入入口 -->
+    <cache-path
+        name="archives"
+        path="archives/" />
+</paths>

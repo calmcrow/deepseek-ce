@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="window_background">#FFFFFF</color>
+    <!-- 网页浅色 / 深色主题的页面底色，供系统栏取色 -->
+    <color name="window_background_light">#FFFFFF</color>
+    <color name="window_background_dark">#151517</color>
+    <color name="ic_launcher_background">#4D6BFE</color>
+
+    <!-- 附件来源选择面板 -->
+    <color name="sheet_background">#FFFFFF</color>
+    <color name="sheet_option_background_color">#F5F6F8</color>
+    <color name="sheet_option_ripple">#1A000000</color>
+    <color name="sheet_option_icon">#1A1A1A</color>
+    <color name="sheet_option_label">#1A1A1A</color>
+</resources>

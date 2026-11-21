@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>DeepSeek</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      启动看门狗：这段内联脚本不依赖打包产物，即使主 bundle 在那台机器上
+      连语法都不被支持，也能把失败原因和 WebView 内核版本留在屏幕上，
+      而不是只留一片白。只在 #root 一直是空的时候才显示。
+    -->
+    <script>
+      ;(function () {
+        var root = document.getElementById('root')
+        var problems = []
+        var describe = function (value) {
+          if (!value) return ''
+          if (typeof value === 'string') return value
+          if (value.stack) return String(value.stack)
+          return String(value.message || value)
+        }
+        window.addEventListener('error', function (event) {
+          problems.push(describe(event.error) || event.message || 'undefined error')
+        })
+        window.addEventListener('unhandledrejection', function (event) {
+          problems.push(describe(event.reason))
+        })
+        var engineVersion = function () {
+          var m = /(?:Chrome|CriOS)\/(\d+)/.exec(navigator.userAgent)
+          return m ? parseInt(m[1], 10) : 0
+        }
+        var render = function (alsoCollapsed) {
+          if (!root) return
+          var empty = root.children.length === 0
+          var collapsed = false
+          if (!empty && alsoCollapsed) {
+            // 塌的是主框架（.frame）而不是 #root：#root 往往还有自己的高度，
+            // 所以必须量真正的布局容器
+            var frame = root.querySelector('[class*="frame-"]') || root.firstElementChild
+            var height = 0
+            try {
+              height = frame ? frame.getBoundingClientRect().height : 0
+            } catch (error) {
+              height = 0
+            }
+            collapsed = height < 60
+          }
+          if (!empty && !collapsed) return
+          var ua = navigator.userAgent
+          var version = engineVersion()
+          var lines = [
+            empty ? '应用没能启动 · App failed to start' : '界面已加载，但没有显示出来 · Layout collapsed',
+            'WebView 内核：' + (version ? 'Chromium ' + version : '未识别（not detected）'),
+            'UA：' + ua,
+          ]
+          if (version > 0 && version < 108) {
+            lines.push('本应用需要 Chromium 108 以上，请更新「Android System WebView」后再打开。')
+          }
+          if (problems.length > 0) {
+            lines.push('错误详情 · errors：')
+            lines.push(problems.slice(0, 3).join('\n\n'))
+          }
+          var box = document.createElement('div')
+          box.setAttribute('data-boot-error', 'true')
+          var base =
+            'padding:20px;font:14px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1a1a1a;background:#fff;'
+          // 布局塌陷时 root 自己高度为 0，塞进去也看不见，改成铺满屏幕的浮层
+          box.style.cssText = collapsed
+            ? base + 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;overflow:auto'
+            : base
+          for (var i = 0; i < lines.length; i++) {
+            var p = document.createElement('div')
+            p.textContent = lines[i]
+            p.style.whiteSpace = 'pre-wrap'
+            p.style.wordBreak = 'break-word'
+            if (i === 0) p.style.cssText += ';font-size:16px;font-weight:600;margin-bottom:10px'
+            else p.style.cssText += ';margin-bottom:6px;opacity:.8'
+            box.appendChild(p)
+          }
+          ;(collapsed ? document.body : root).appendChild(box)
+        }
+        setTimeout(function () {
+          render(false)
+        }, 6000)
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            render(false)
+          }, 4000)
+          // DOM 起来了但高度塌成 0（曾经的纯白屏）也要报出来
+          setTimeout(function () {
+            render(true)
+          }, 6000)
+        })
+      })()
+    </script>
+  </body>
+</html>

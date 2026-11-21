@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 回形针点开后的来源选择：拍照 / 相册 / 文件 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/sheet_background"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="18dp">
+
+    <LinearLayout
+        android:id="@+id/optionCamera"
+        android:layout_width="0dp"
+        android:layout_height="96dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/sheet_option_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@string/pick_camera"
+            android:src="@drawable/ic_camera_24"
+            android:tint="@color/sheet_option_icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/pick_camera"
+            android:textColor="@color/sheet_option_label"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/optionGallery"
+        android:layout_width="0dp"
+        android:layout_height="96dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/sheet_option_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@string/pick_gallery"
+            android:src="@drawable/ic_gallery_24"
+            android:tint="@color/sheet_option_icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/pick_gallery"
+            android:textColor="@color/sheet_option_label"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/optionFiles"
+        android:layout_width="0dp"
+        android:layout_height="96dp"
+        android:layout_marginStart="4dp"
+        android:layout_marginEnd="4dp"
+        android:layout_weight="1"
+        android:background="@drawable/sheet_option_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@string/pick_files"
+            android:src="@drawable/ic_file_24"
+            android:tint="@color/sheet_option_icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/pick_files"
+            android:textColor="@color/sheet_option_label"
+            android:textSize="15sp" />
+    </LinearLayout>
+
+</LinearLayout>

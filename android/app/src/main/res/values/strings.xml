@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DeepSeek CE</string>
+    <string name="pick_file">选择文件</string>
+    <string name="pick_camera">拍照</string>
+    <string name="pick_gallery">相册</string>
+    <string name="pick_files">文件</string>
+    <string name="no_camera">没有找到可用的相机</string>
+    <string name="open_failed">打开失败，请重试</string>
+    <string name="load_failed">网页加载失败</string>
+    <string name="reload">重新加载</string>
+    <string name="saved_to_downloads">已保存到「下载」目录</string>
+    <string name="save_failed">保存失败</string>
+    <string name="export_folder_saved">已选定保存位置</string>
+</resources>

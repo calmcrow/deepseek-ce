@@ -1,0 +1,40 @@
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.88);
+  overflow: hidden;
+  /* 手势自己处理，别让浏览器抢去滚动 */
+  touch-action: none;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  transition: transform 120ms var(--ds-ease-in-out, ease-out);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+}

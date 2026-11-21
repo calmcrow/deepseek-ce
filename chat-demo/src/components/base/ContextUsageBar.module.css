@@ -1,0 +1,46 @@
+/* 菜单顶部的上下文用量条：进度条 + 一行说明，纯展示 */
+.usage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 132px;
+  user-select: none;
+}
+
+.track {
+  box-sizing: border-box;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background-color: var(--dsw-alias-bg-skeleton);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width var(--ds-transition-duration) var(--ds-ease-in-out);
+}
+
+/* 已用比例分段着色：前 30% 绿色、30%~80% 黄色、80% 之后红色 */
+.green {
+  background-color: var(--dsw-static-green-500);
+}
+
+.amber {
+  background-color: var(--dsw-static-amber-500);
+}
+
+.red {
+  background-color: var(--dsw-static-red-600);
+}
+
+/* 拿不到 usage 时只画一条空轨道，用中性色 */
+.unknown {
+  background-color: var(--dsw-alias-label-dimmed);
+}
+
+.label {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary);
+}

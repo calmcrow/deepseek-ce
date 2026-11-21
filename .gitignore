@@ -1,0 +1,21 @@
+# 依赖与构建产物
+node_modules/
+chat-demo/dist/
+
+# 打进 APK 的网页构建产物：由 chat-demo 构建后复制进来，不纳入版本库
+android/app/src/main/assets/www/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# 安装包与压缩包走 GitHub Releases，不进仓库历史
+*.apk
+*.zip
+
+# 临时与本地文件
+tmp/
+tools/edge-profile*/
+*.log
+.DS_Store
+Thumbs.db
