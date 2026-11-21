@@ -32,7 +32,7 @@
 | 方式 | 地址 | 说明 |
 | --- | --- | --- |
 | **在线使用** | [shilinyanya.github.io/deepseek-web-unofficial](https://shilinyanya.github.io/deepseek-web-unofficial/) | 点开就用，免安装 |
-| **离线包** | [Releases 页面下载](…/../releases/latest)（1.8 MB） | 解压后双击 `index.html`，纯静态、不需要服务器 |
+| **离线包** | [Releases 页面下载](../../releases/latest)（1.8 MB） | 解压后双击 `index.html`，纯静态、不需要服务器 |
 
 ### 💻 源码
 
