@@ -362,6 +362,10 @@ export const getReplyContextTokens = ({ usage }: AssistantMessage): number | und
  *（例如刚导入的归档）时为 undefined，界面据此显示「—」而不是乱算。
  */
 export const getSessionContextUsage = (session: Session): SessionContextUsage | undefined => {
+  // 刚压缩完：大小先留空，等下一次回答的 usage 回来再显示
+  if (session.contextUsageCleared) {
+    return undefined
+  }
   const last = getLastVisibleAssistant(session)
   const tokens = last ? getReplyContextTokens(last) : undefined
   return last && tokens !== undefined ? { tokens, model: last.model } : undefined
@@ -386,19 +390,15 @@ export const toRequestMessages = (
 ): MessageParam[] => {
   const messages: MessageParam[] = []
   let previousReminder: string | undefined
-  /**
-   * 不支持 latest_reminder 的模型（deepseek-v4-pro）：这个伪角色消息会被服务端拒掉，
-   * 改成把提醒作为普通文字拼进下一条用户消息，内容不丢。
-   */
-  let inlineReminder: string | undefined
   const appendReminder = (reminder: string | undefined) => {
+    // deepseek-v4-pro 不支持 latest_reminder 伪角色；把它拼进用户文字会被模型
+    // 当成提问内容（表现为模型复述「日期/平台/语言」），所以直接省略提醒。
+    if (!supportsReminder) {
+      return
+    }
     // 仅在当前分支首次出现或内容变化时插入快照；缺少快照的消息保持原有内容。
     if (reminder && reminder !== previousReminder) {
-      if (supportsReminder) {
-        messages.push({ role: 'latest_reminder', content: reminder })
-      } else {
-        inlineReminder = reminder
-      }
+      messages.push({ role: 'latest_reminder', content: reminder })
       previousReminder = reminder
     }
   }
@@ -411,15 +411,7 @@ export const toRequestMessages = (
     messages.push(toUserParam(user, textDocuments), toAssistantParam(reply))
   }
   appendReminder(latestReminder)
-  // 不支持 latest_reminder 时，把提醒并进这一轮的提问文字
-  const finalQuestion =
-    inlineReminder === undefined
-      ? question
-      : {
-          ...question,
-          content: question.content ? `${inlineReminder}\n\n${question.content}` : inlineReminder,
-        }
-  messages.push(toUserParam(finalQuestion, textDocuments))
+  messages.push(toUserParam(question, textDocuments))
   if (prefix?.prefix) {
     const assistant = toAssistantParam(prefix, true, thinking)
     // 没有非空白正文或有效思考时直接重发原问题，避免服务端拒绝空 Prefill。
@@ -439,3 +431,64 @@ export const toRequestMessages = (
 /** 思考用时（秒），至少 1 秒 */
 export const getThinkingSeconds = (startedAt: number, endedAt: number) =>
   Math.max(1, Math.round((endedAt - startedAt) / 1000))
+
+/**
+ * 把要压缩的轮次转成请求消息，供摘要使用。
+ * 附件换成文字说明、不重放图片或文档块，避免摘要请求自己撞上解析通道的输入预算；
+ * 搜索和读链接的结果补成线索，保留 URL 与已知摘要，压缩后不必重新搜索。
+ */
+export const toCompactMessages = (
+  rounds: [UserMessage, AssistantMessage][]
+): MessageParam[] => {
+  const messages: MessageParam[] = []
+  for (const [user, reply] of rounds) {
+    const files =
+      user.files.length > 0
+        ? `附件：${user.files
+            .map((file) => `[${file.isImage ? '图片' : '文件'}] ${file.name}`)
+            .join('、')}`
+        : ''
+    const content = [user.content.trim(), files].filter(Boolean).join('\n')
+    const assistant = toAssistantParam(reply)
+    const hints = collectToolHints(reply)
+    if (hints) {
+      assistant.content.push({ type: 'text', text: hints })
+    }
+    messages.push(toUserParam({ ...user, content, files: [] }), assistant)
+  }
+  return messages
+}
+
+/** 压缩重放时最多保留多少条工具结果线索 */
+const TOOL_HINT_LIMIT = 5
+/** 工具结果线索里每段摘要的最大长度 */
+const TOOL_HINT_CHARS = 120
+
+/** 把搜索 / 读链接的结果压成可回溯的线索：标题、URL 和已知摘要 */
+const collectToolHints = (reply: AssistantMessage): string => {
+  const lines: string[] = []
+  for (const block of reply.blocks) {
+    if (lines.length >= TOOL_HINT_LIMIT) {
+      break
+    }
+    if (block.type === 'web_search_tool_result') {
+      for (const item of block.content) {
+        if (lines.length >= TOOL_HINT_LIMIT) {
+          break
+        }
+        if (!('title' in item) || !item.url) {
+          continue
+        }
+        const snippet = item.snippet ? `：${item.snippet.slice(0, TOOL_HINT_CHARS)}` : ''
+        lines.push(`- 搜索：${item.title}（${item.url}）${snippet}`)
+      }
+    } else if (block.type === 'web_fetch_tool_result' && block.content.type === 'web_fetch_result') {
+      const { url, content } = block.content
+      if (!url) {
+        continue
+      }
+      lines.push(`- 阅读：${content.title ?? url}（${url}）`)
+    }
+  }
+  return lines.length > 0 ? `工具结果线索：\n${lines.join('\n')}` : ''
+}

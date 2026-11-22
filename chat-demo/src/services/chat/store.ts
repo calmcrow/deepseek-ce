@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createId } from '../../utils/id.js'
-import { ApiError, streamMessage } from '../api/client.js'
+import { translate } from '../../i18n/index.js'
+import { ApiError, generateTitle, streamMessage } from '../api/client.js'
 import { streamRelayMessage } from '../api/relay.js'
 import type { ChatModel, CreateMessageRequest } from '../api/types.js'
 import { extractFileIds, getFileErrorCode, isRetryableApiError } from '../api/errors.js'
@@ -16,7 +17,12 @@ import {
   uploadAttachment,
   useUploads,
 } from '../attachments.js'
-import { getContextWindow, getPresetContent, useSettings } from '../settings.js'
+import {
+  getContextWindow,
+  getPresetContent,
+  setNetworkModelEnabled,
+  useSettings,
+} from '../settings.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -27,7 +33,7 @@ import {
   prepareDraftMessage,
 } from './drafts.js'
 import { extractDocumentText } from './splitDocument.js'
-import { buildDigest, summarizeDigest } from './summarize.js'
+import { buildDigest, summarizeDigest, summarizeMessages } from './summarize.js'
 import { createLatestReminder } from './latestReminder.js'
 import {
   applyEvent,
@@ -36,6 +42,7 @@ import {
   getContextRounds,
   getSessionContextUsage,
   settleReply,
+  toCompactMessages,
   toRequestMessages,
 } from './reply.js'
 import {
@@ -75,10 +82,12 @@ const SESSION_CACHE_LIMIT = 5
 /**
  * 官方网页端用 `safety_check.level = 'high'` 声明「扩展模式」，
  * deepseek_web_search / deepseek_read_url 只在扩展模式下可用；审核档位也由它申请。
- * 这里默认不发（null），也就是不主动向上游申请 high 档；
- * 代价是服务端工具可能不可用，要恢复官方行为把 null 改成 `{ level: 'high' }`。
+ * 不带这个字段时服务端会静默忽略工具（表现为「模型说没有实时信息」），
+ * 所以这里保持 `{ level: 'high' }`，与官方行为一致。
  */
-const SAFETY_CHECK: { level: 'high' } | null = null
+const SAFETY_CHECK: { level: 'high' } | null = { level: 'high' }
+/** 重放原始消息做摘要的字符上限；超过就退回拼接文本，避免摘要请求自己超限 */
+const REPLAY_MAX_CHARS = 150_000
 /** 服务端判定 file_id 失效后，重新补传并重发的最多次数（不含首次请求） */
 const FILE_RETRY_LIMIT = 2
 /**
@@ -127,9 +136,6 @@ const serverTools = (search: boolean, text: string): CreateMessageRequest['tools
  */
 const supportsServerTools = (model: ChatModel): boolean => !/^deepseek-v4-pro/i.test(model)
 
-/** 允许自动补标题的请求；手动重命名后取消本轮标题写入，包含主动清空标题的情况。 */
-const titleRequests = new Set<AbortController>()
-
 type ChatState = {
   ready: boolean
   initError: boolean
@@ -144,6 +150,20 @@ type ChatState = {
   activeId: string | null
   /** 正在生成回复的会话 */
   streaming: Record<string, AbortController>
+  /** 手动压缩的进行/完成状态：有值时顶部显示压缩进度条 */
+  compressState: { sessionId: string; status: 'running' | 'done' | 'failed' } | null
+  /** 最近一次联网检索的结果：网页列表与摘要，供界面展示 */
+  webSearch: {
+    sessionId: string
+    pages: {
+      title: string
+      url: string
+      snippet: string
+      siteName?: string
+      siteIcon?: string
+    }[]
+    digest: string
+  } | null
 }
 
 export const useChatStore = create<ChatState>(() => ({
@@ -156,6 +176,8 @@ export const useChatStore = create<ChatState>(() => ({
   sessionSaveErrors: {},
   activeId: null,
   streaming: {},
+  compressState: null,
+  webSearch: null,
 }))
 
 const { getState: get, setState: set } = useChatStore
@@ -578,10 +600,6 @@ export const renameSession = (id: string, title: string) => {
   if (get().importingHistory || deletingSessions.has(id)) {
     return
   }
-  const controller = getStreamController(id)
-  if (controller) {
-    titleRequests.delete(controller)
-  }
   if (getSession(id)) {
     updateSession(id, (session) => ({ ...session, title }))
     persist(id)
@@ -795,7 +813,13 @@ export const regenerateReply = (sessionId: string, messageId?: string) => {
 }
 
 /** 编辑提问后新增同父版本，保留原文件；旧问题的所有回答与后续对话仍可切回。 */
-export const editMessage = (sessionId: string, messageId: string, content: string): boolean => {
+export const editMessage = (
+  sessionId: string,
+  messageId: string,
+  content: string,
+  /** 编辑后保留的附件；不传则沿用原消息 */
+  files?: UserMessage['files']
+): boolean => {
   if (get().importingHistory || deletingSessions.has(sessionId)) {
     return false
   }
@@ -814,7 +838,7 @@ export const editMessage = (sessionId: string, messageId: string, content: strin
     id: createId(),
     role: 'user',
     content: text,
-    files: previous.files,
+    files: files ?? previous.files,
     createdAt: Date.now(),
   }
   const reply = createReply()
@@ -909,6 +933,17 @@ type Request = { history: Message[]; question: UserMessage; prefix?: AssistantMe
  * 标记记在会话对象上由 db.saveSession 落盘；导入/导出的归档格式是官方格式，不含这个字段，
  * 所以换设备或重新导入后标记可能丢失——最坏的情况是再提示一次，可以接受。
  */
+let compressClearTimer: ReturnType<typeof setTimeout> | undefined
+
+/** 压缩结束：显示结果，5 秒后自动收起 */
+const settleCompressState = (sessionId: string, status: 'done' | 'failed') => {
+  set({ compressState: { sessionId, status } })
+  clearTimeout(compressClearTimer)
+  compressClearTimer = setTimeout(() => {
+    set({ compressState: null })
+  }, 5000)
+}
+
 export const compressContext = async (sessionId: string): Promise<boolean> => {
   if (get().importingHistory) {
     return false
@@ -917,8 +952,10 @@ export const compressContext = async (sessionId: string): Promise<boolean> => {
   const cached = getSession(sessionId)
   const session = cached ?? (await db.loadSession(sessionId))
   if (!session) {
+    settleCompressState(sessionId, 'failed')
     return false
   }
+  set({ compressState: { sessionId, status: 'running' } })
   let summary: string | undefined = session.contextSummary
   let summaryRounds = session.contextSummaryRounds
   // 先让模型给「要被裁掉的那些轮」写一份提要，之后每轮请求都带着它，
@@ -930,17 +967,34 @@ export const compressContext = async (sessionId: string): Promise<boolean> => {
     summarizedRounds,
     Math.max(summarizedRounds, rounds.length - CONTEXT_KEEP_ROUNDS)
   )
-  const digest = buildDigest(dropped)
   const apiKey = useSettings.getState().apiKey
-  if (digest && apiKey) {
+  // 优先重放原始消息：模型看到真实对话结构（含工具结果块），比拼接文本更完整；
+  // 内容太大时退回拼接文本，避免摘要请求自己超限。
+  const replay = toCompactMessages(dropped)
+  if (summary) {
+    replay.unshift({ role: 'user', content: `【上一版前情提要】\n${summary}` })
+  }
+  const replayChars = JSON.stringify(replay).length
+  if ((dropped.length > 0 || summary) && apiKey) {
     showToast({ key: 'contextSummarizing' })
     try {
-      const text = await summarizeDigest({
-        apiKey,
-        model: useSettings.getState().model,
-        digest: summary ? `${summary}\n\n${digest}` : digest,
-        signal: new AbortController().signal,
-      })
+      const signal = new AbortController().signal
+      const text =
+        replayChars <= REPLAY_MAX_CHARS
+          ? await summarizeMessages({
+              apiKey,
+              model: useSettings.getState().model,
+              // 复用会话自己的系统提示词，让压缩请求的前缀命中上下文缓存
+              system: buildSystemPrompt(sessionId),
+              messages: replay,
+              signal,
+            })
+          : await summarizeDigest({
+              apiKey,
+              model: useSettings.getState().model,
+              digest: summary ? `${summary}\n\n${buildDigest(dropped)}` : buildDigest(dropped),
+              signal,
+            })
       if (text) {
         summary = text
         // 记「摘要覆盖到第几轮」= 被裁掉的边界，而不是会话总轮数：
@@ -957,6 +1011,8 @@ export const compressContext = async (sessionId: string): Promise<boolean> => {
   const next: Session = {
     ...session,
     contextKeepRounds: CONTEXT_KEEP_ROUNDS,
+    // 压缩成功后先把上下文大小置空，等下一次回答的 usage 再显示真实值
+    contextUsageCleared: true,
     // 压缩完清掉「已提示」标记：下次上下文再满时重新提示，可以再压一次
     contextPromptedAt: undefined,
     ...(summary ? { contextSummary: summary, contextSummaryRounds: summaryRounds } : {}),
@@ -966,9 +1022,17 @@ export const compressContext = async (sessionId: string): Promise<boolean> => {
     updateSession(sessionId, () => next)
     persist(sessionId)
   } else {
-    // 没进内存时直接落库，并让侧栏的用量条继续显示原值（上下文用量不受压缩影响）
+    // 没进内存时直接落库；列表摘要也要同步「上下文大小先置空」
     await db.saveSession(next)
+    set((state) => ({
+      sessions: state.sessions.map((summary) =>
+        summary.id === sessionId
+          ? { ...summary, contextUsage: getSessionContextUsage(next) }
+          : summary
+      ),
+    }))
   }
+  settleCompressState(sessionId, 'done')
   showToast({ key: 'contextCompressed' })
   return true
 }
@@ -1332,13 +1396,185 @@ const waitForRetry = (attempt: number, signal: AbortSignal) =>  new Promise<void
  * 补传失败时回复记为 upload 错误，可重试。
  * 服务端判定 file_id 失效时重新补传后重发，退避重试且次数有上限，超过则按原始报错收尾。
  */
+/** 实验性：用指定模型执行联网检索（搜索/读链接），把资料交给当前模型回答；失败重试一次 */
+const runFlashSearch = async (
+  apiKey: string,
+  question: string,
+  model: ChatModel,
+  signal: AbortSignal
+): Promise<{
+  digest: string
+  pages: { title: string; url: string; snippet: string; siteName?: string; siteIcon?: string }[]
+} | null> => {
+  if (!apiKey || signal.aborted) {
+    return null
+  }
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController()
+    const onAbort = () => controller.abort()
+    signal.addEventListener('abort', onAbort, { once: true })
+    let text = ''
+    const pages: {
+      title: string
+      url: string
+      snippet: string
+      siteName?: string
+      siteIcon?: string
+    }[] = []
+    try {
+      const events = streamMessage(
+        apiKey,
+        {
+          model,
+          system:
+            '你是联网搜索助手。根据用户的问题执行联网搜索或读取其中的链接，只输出与问题最相关的资料摘要，' +
+            '包含关键事实、数据与来源链接，最多 1500 字；不要直接回答用户问题。',
+          messages: [{ role: 'user', content: question }],
+          thinking: { type: 'disabled' },
+          ...(SAFETY_CHECK ? { safety_check: SAFETY_CHECK } : {}),
+          tools: serverTools(true, question),
+        },
+        controller.signal
+      )
+      for await (const event of events) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          text += event.delta.text
+        } else if (
+          event.type === 'content_block_start' &&
+          event.content_block.type === 'web_search_tool_result'
+        ) {
+          for (const item of event.content_block.content) {
+            if (item.type === 'web_search_result') {
+              pages.push({
+              title: item.title,
+              url: item.url,
+              snippet: item.snippet,
+              ...(item.site_name ? { siteName: item.site_name } : {}),
+              ...(item.site_icon ? { siteIcon: item.site_icon } : {}),
+            })
+            }
+          }
+        }
+      }
+      return text.trim() ? { digest: text.trim(), pages } : null
+    } catch (error) {
+      if (attempt === 1) {
+        return null
+      }
+      // 网络抖动：稍等一拍再试
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    } finally {
+      signal.removeEventListener('abort', onAbort)
+      controller.abort()
+    }
+  }
+  return null
+}
+
+/** 先把搜索调用挂到回答最前面：官方步骤条立刻显示在上方 */
+const attachSearchUse = (
+  reply: AssistantMessage,
+  toolId: string,
+  query: string
+): AssistantMessage => ({
+  ...reply,
+  blocks: [
+    {
+      type: 'server_tool_use',
+      id: toolId,
+      name: 'deepseek_web_search',
+      input: { action: 'search', query, queries: query ? [query] : [] },
+      caller: { type: 'direct' },
+      kind: 'search',
+    },
+    ...reply.blocks,
+  ],
+})
+
+/** 回答结束后再补搜索到的网页：官方底部站点条与可点击引用都靠这个块 */
+const attachSearchResult = (
+  reply: AssistantMessage,
+  toolId: string,
+  pages: { title: string; url: string; snippet: string; siteName?: string; siteIcon?: string }[]
+): AssistantMessage => {
+  // 官方正文用 [citation:N] 渲染可点击角标；模型可能写 [N] 或（一）（二），这里统一转换
+  const cnNumbers: Record<string, number> = {
+    一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
+    十: 10, 十一: 11, 十二: 12, 十三: 13, 十四: 14, 十五: 15,
+  }
+  const toCitation = (text: string) =>
+    text
+      .replace(/[（(]([一二三四五六七八九十]{1,2})[)）]/g, (match, cn: string) => {
+        const index = cnNumbers[cn]
+        return index && index <= pages.length ? `[citation:${index}]` : match
+      })
+      .replace(/\[(\d{1,2})\]/g, (match, num: string) => {
+        const index = Number(num)
+        return index >= 1 && index <= pages.length ? `[citation:${index}]` : match
+      })
+  const textBlocks = reply.blocks.filter((block) => block.type === 'text')
+  const citationText = textBlocks.map((block) => (block.type === 'text' ? block.text : '')).join('')
+  const citations = citationText.match(/\[citation:\d+\]/g)?.length ?? 0
+  // 引用只在模型自己写的位置渲染；随机分配会误导用户，不做兜底
+  const blocksWithRefs = reply.blocks.map((block) =>
+    block.type === 'text' ? { ...block, text: toCitation(block.text) } : block
+  )
+  return {
+    ...reply,
+    blocks: [
+      ...blocksWithRefs,
+      {
+        type: 'web_search_tool_result',
+        tool_use_id: toolId,
+        content: pages.map((page) => ({
+          type: 'web_search_result' as const,
+          title: page.title,
+          url: page.url,
+          snippet: page.snippet,
+          site_icon: page.siteIcon ?? null,
+          site_name: page.siteName ?? null,
+          encrypted_content: '',
+          page_age: null,
+        })),
+        kind: 'search',
+      },
+    ],
+  }
+}
+
+/** 标题清洗：取第一行、去引号/前缀、限长 */
+const sanitizeTitle = (raw: string): string => {
+  const line = (raw.split(/\r?\n/)[0] ?? '').trim()
+  return line
+    .replace(/^#+\s*/, '')
+    .replace(/^["'“”‘’「」【】\s]+|["'“”‘’「」【】\s]+$/g, '')
+    .slice(0, 24)
+}
+
 const streamReply = async (sessionId: string, initial: AssistantMessage, request: Request) => {
   const controller = new AbortController()
-  if (!getSession(sessionId)?.title) {
-    titleRequests.add(controller)
+  // 服务端给「生成标题」单独设了 32768 的输入预算，带附件时会被文档直接顶爆。
+  // 标题：先用提问文字（没有文字就用附件名）做本地兜底，再发一次独立的小请求让模型取更好的。
+  // 独立请求只带用户文字，不参与主请求的输入预算，因此不会被文档撑爆。
+  const existingTitle = getSession(sessionId)?.title
+  const isFirstPrompt = !existingTitle || existingTitle === translate('untitledChat')
+  if (!existingTitle) {
+    const { content, files } = request.question
+    const text = content.trim().replace(/\s+/g, ' ')
+    // 还没生成标题时用占位，不拿用户提问截断当标题
+    const fallback = translate('untitledChat')
+    if (fallback) {
+      updateSession(sessionId, (session) => (session.title ? session : { ...session, title: fallback }))
+    }
   }
   set((state) => ({ streaming: { ...state.streaming, [sessionId]: controller } }))
   let reply = initial
+  /** 自定义联网检索到的网页：回答结束后挂成官方工具结果块 */
+  let injectedPages: { title: string; url: string; snippet: string; siteName?: string; siteIcon?: string }[] | null =
+    null
+  let injectedToolId: string | null = null
+  /** 服务端返回的标题（开启标题且生成成功时） */
+  let serverTitle: string | null = null
   let frame = 0
   const flush = () => {
     cancelAnimationFrame(frame)
@@ -1364,9 +1600,54 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         reply = { ...reply, latestReminder }
         updateReply(sessionId, reply)
         persist(sessionId)
+        // 实验性：当前模型不支持联网工具时，用「联网使用的模型」检索，把资料拼进提问交给当前模型
+        const requestModelEarly = initial.model ?? useSettings.getState().model
+        const wantsWebAccess =
+          (initial.search ?? false) || hasUrl(prepared.question.content)
+        // 只有开启自定义联网模型时才单独检索；关闭时由对话模型自己联网（主请求带工具）
+        const needsWebAccess = wantsWebAccess && useSettings.getState().networkModelEnabled
+        let questionForRequest = prepared.question
+        let webDigest: string | null = null
+        let webNotice: string | null = null
+        if (needsWebAccess) {
+          const networkModel = useSettings.getState().networkModel
+          const found = await runFlashSearch(
+            useSettings.getState().apiKey ?? '',
+            prepared.question.content,
+            networkModel,
+            controller.signal
+          )
+          webDigest = found?.digest ?? null
+          if (found) {
+            // 一份给当前模型（当作它自己的检索结果，带编号方便引用），一份留给界面展示
+            const numbered = found.pages
+              .map(
+                (page, index) =>
+                  `[${index + 1}] ${page.siteName ?? ''} ${page.title}\n${page.url}\n${page.snippet}`
+              )
+              .join('\n\n')
+            questionForRequest = {
+              ...prepared.question,
+              content: `【助手联网检索结果｜这是你自己调用的联网搜索服务返回的内容，不是用户提供的资料，请直接当作你的检索结果使用。回答规则：1) 尽量采用资料中最新的信息，但不要因为无法判断日期、信息有冲突或资料不完整就省略相关内容——资料里有的都应当呈现；2) 不要以「知识截止」为由拒绝；3) 引用资料时写括号数字（一）（二）（三）…，对应下面网页列表的编号；4) 必须把引用就近写在对应的事实/段落后面（例如“市值蒸发约 5000 亿美元（三）”），不要把引用全部堆在回答末尾；5) 回答里只要用了资料，就必须出现括号数字引用】\n${numbered ? `${numbered}\n\n` : ''}【检索摘要】\n${found.digest}\n\n【用户问题】\n${prepared.question.content}`,
+            }
+            set({ webSearch: { sessionId, pages: found.pages, digest: found.digest } })
+            injectedPages = found.pages
+            injectedToolId = `srvtoolu_s_${Date.now()}_${createId().slice(0, 8)}`
+            reply = attachSearchUse(reply, injectedToolId, prepared.question.content)
+            updateReply(sessionId, reply)
+          } else {
+            // 联网模型失败：自动关闭实验性功能，不弹客户端错误，交给对话模型向用户说明
+            setNetworkModelEnabled(false)
+            webNotice = `【系统提示】你选择的联网模型「${networkModel}」无法联网，本次没有进行网页检索；实验性联网功能已自动关闭。请在回答开头向用户说明这一点。`
+            questionForRequest = {
+              ...prepared.question,
+              content: `${webNotice}\n\n【用户问题】\n${prepared.question.content}`,
+            }
+          }
+        }
         const messages = toRequestMessages(
           prepared.history,
-          prepared.question,
+          questionForRequest,
           prepared.prefix,
           initial.thinking ?? false,
           latestReminder,
@@ -1399,42 +1680,49 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               const toolCapable = supportsServerTools(requestModel)
               const wantsSearch = initial.search ?? false
               // v4-pro 带上服务端工具/标题生成会被直接拒，这些能力一并关掉并说明原因
-              if (!toolCapable && (wantsSearch || hasUrl(prepared.question.content))) {
+              if (
+                !toolCapable &&
+                !webDigest &&
+                !webNotice &&
+                (wantsSearch || hasUrl(prepared.question.content))
+              ) {
                 showToast({ key: 'modelNoServerTools', type: 'error' })
+              }
+              // 服务端工具同样吃 32768 的输入预算，带附件时发出去会把大文档一起拒掉
+              if (toolCapable && wantsSearch && prepared.question.files.length > 0) {
+                showToast({ key: 'searchSkippedWithFiles' })
               }
               return streamMessage(
                 useSettings.getState().apiKey ?? '',
                 {
                   model: requestModel,
                   system: buildSystemPrompt(sessionId),
+                  // 标题：旧接口（额外请求）打开时关闭服务端标题；
+                  // 新接口「启用标题生成」只对支持标题的模型、且只在会话第一次请求时带 title.enabled
+                  title: useSettings.getState().titleMode === 'extra'
+                    ? { enabled: false }
+                    : supportsServerTools(requestModel) && isFirstPrompt
+                      ? { enabled: true }
+                      : undefined,
                   messages,
                   thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
                   ...(SAFETY_CHECK ? { safety_check: SAFETY_CHECK } : {}),
-                  tools: toolCapable
-                    ? serverTools(wantsSearch, prepared.question.content)
-                    : [],
-                  ...(toolCapable && titleRequests.has(controller)
-                    ? { title: { enabled: true } }
-                    : {}),
+                  tools:
+                    !useSettings.getState().networkModelEnabled &&
+                    toolCapable &&
+                    prepared.question.files.length === 0
+                      ? serverTools(wantsSearch, prepared.question.content)
+                      : [],
                 },
                 controller.signal
               )
             })()
         const blockIndexes = new Map<number, number>()
         for await (const event of events) {
-          receivedContent ||= event.type === 'content_block_start'
-          if (
-            event.type === 'message_delta' &&
-            (event.delta.stop_reason === 'end_turn' || event.delta.stop_reason === 'max_tokens') &&
-            event.delta.title?.trim() &&
-            titleRequests.has(controller) &&
-            !controller.signal.aborted &&
-            !get().importingHistory
-          ) {
-            const title = event.delta.title.trim()
-            updateSession(sessionId, (session) => (session.title ? session : { ...session, title }))
-            titleRequests.delete(controller)
+          if (event.type === 'message_delta' && event.delta.title) {
+            serverTitle = event.delta.title
           }
+          receivedContent ||= event.type === 'content_block_start'
           reply = applyEvent(reply, event, Date.now(), blockIndexes)
           if (document.visibilityState === 'hidden') {
             flush()
@@ -1584,10 +1872,57 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
       }
     }
   } finally {
-    titleRequests.delete(controller)
     streamFlushes.delete(sessionId)
     cancelAnimationFrame(frame)
+    // 实验性：回答结束后用「一问一答」的上下文生成标题，比只看提问准
+    if (useSettings.getState().titleMode === 'extra' && !serverTitle) {
+      const questionText = request.question.content.trim()
+      const answerText = reply.blocks
+        .filter((block) => block.type === 'text')
+        .map((block) => (block.type === 'text' ? block.text : ''))
+        .join('\n')
+        .trim()
+      if (questionText && answerText) {
+        const model = initial.model ?? useSettings.getState().model
+        void generateTitle(
+          useSettings.getState().apiKey ?? '',
+          model,
+          `用户问题：${questionText}\n\n助手回答：${answerText.slice(0, 4000)}`
+        )
+          .then((raw) => {
+            const title = sanitizeTitle(raw)
+            if (!title) {
+              return
+            }
+            updateSession(sessionId, (session) =>
+              !session.title || session.title === translate('untitledChat')
+                ? { ...session, title }
+                : session
+            )
+            persist(sessionId)
+          })
+          .catch((error) => {
+          })
+      }
+    }
+    if (serverTitle) {
+      const title = sanitizeTitle(serverTitle)
+      if (title) {
+        updateSession(sessionId, (session) =>
+          !session.title || session.title === translate('untitledChat')
+            ? { ...session, title }
+            : session
+        )
+      }
+    }
+    if (injectedPages && injectedPages.length > 0) {
+      reply = attachSearchResult(reply, injectedToolId ?? createId(), injectedPages)
+    }
     updateReply(sessionId, reply)
+    // 这条回答的 usage 已经是最新，清掉「压缩后先置空」的标记
+    updateSession(sessionId, (session) =>
+      session.contextUsageCleared ? { ...session, contextUsageCleared: undefined } : session
+    )
     set((state) => ({
       streaming: Object.fromEntries(
         Object.entries(state.streaming).filter(([id]) => id !== sessionId)
