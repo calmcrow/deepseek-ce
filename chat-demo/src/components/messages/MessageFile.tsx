@@ -4,7 +4,7 @@ import { useTranslate } from '../../i18n/index.js'
 import { useUploads } from '../../services/attachments.js'
 import { loadFile } from '../../services/chat/db.js'
 import type { FileAttachment } from '../../services/chat/types.js'
-import { IconPhotoErrorFill20, IconRefreshOutline16 } from '../base/icons.js'
+import { IconCloseFill14, IconPhotoErrorFill20, IconRefreshOutline16 } from '../base/icons.js'
 import { openImageViewer } from '../base/ImageViewer.js'
 import { Tooltip } from '../base/Tooltip.js'
 import { FileCard } from '../files/FileCard.js'
@@ -51,10 +51,13 @@ const useUploadState = (file: FileAttachment) =>
 export const MessageFile = ({
   file,
   onRetry,
+  onRemove,
 }: {
   file: FileAttachment
   /** 本条消息补传失败且可重试时提供 */
   onRetry: (() => void) | null
+  /** 编辑消息时提供：把这个附件从本轮提问里摘掉 */
+  onRemove?: () => void
 }) => {
   const t = useTranslate()
   const url = useFileUrl(file.id)
@@ -136,7 +139,11 @@ export const MessageFile = ({
     }
 
     // 正常态：点开应用内全屏查看器（WebView 不处理 target="_blank"，原来的链接点了没反应）
-    return url ? (
+    if (!url) {
+      // 原件还没加载出来（极短暂）
+      return <div className={styles.image} />
+    }
+    const image = (
       <button
         type="button"
         className={clsx(styles.image, styles.imageThumb)}
@@ -146,9 +153,23 @@ export const MessageFile = ({
       >
         {preview}
       </button>
-    ) : (
-      // 原件还没加载出来（极短暂）
-      <div className={styles.image} />
+    )
+    if (!onRemove) {
+      return image
+    }
+    return (
+      <div className={styles.editable}>
+        {image}
+        <button
+          type="button"
+          className={styles.remove}
+          title={t('delete')}
+          aria-label={t('delete')}
+          onClick={onRemove}
+        >
+          <IconCloseFill14 />
+        </button>
+      </div>
     )
   }
 
@@ -159,6 +180,7 @@ export const MessageFile = ({
       status={uploading ? 'uploading' : failed ? 'error' : 'done'}
       error={errorText}
       onRetry={retry ?? undefined}
+      onRemove={onRemove}
       onOpen={url && !upload ? () => window.open(url, '_blank', 'noreferrer') : undefined}
     />
   )

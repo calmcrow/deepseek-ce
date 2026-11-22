@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import {
+  IconCloseFill14,
   IconGlobeLanguageOutline14,
   IconPaperclipOutline16,
   IconSendOutline16,
@@ -9,7 +10,8 @@ import {
 } from '../base/icons.js'
 import { setSearch, setThinking, useSettings } from '../../services/settings.js'
 import { useIsMobile } from '../../app/viewport.js'
-import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
+import { editMessage, sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
+import { endEditMessage, removeEditFile, useMessageEdits } from '../../services/chat/messageEdit.js'
 import {
   addDraftFiles,
   EMPTY_DRAFT,
@@ -28,6 +30,7 @@ import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
 import { ACCEPT, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
+import { MessageFile } from '../messages/MessageFile.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { Spectrum } from './Spectrum.js'
@@ -53,6 +56,11 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const networkModelEnabled = useSettings((state) => state.networkModelEnabled)
+  // 正在编辑的消息：输入框临时接管它的正文，提交后清空
+  const editing = useMessageEdits((state) =>
+    sessionId === null ? undefined : state.targets.get(sessionId)
+  )
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const togglesRef = useRef<HTMLDivElement>(null)
@@ -75,7 +83,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   }, [t])
 
   const acceptFiles = (files: File[]) => {
-    if (files.length === 0 || useChatStore.getState().importingHistory || !ensureApiKey()) {
+    // 编辑消息时不接受新附件：附件沿用原消息里的，输入框只负责正文
+    if (
+      editing ||
+      files.length === 0 ||
+      useChatStore.getState().importingHistory ||
+      !ensureApiKey()
+    ) {
       return
     }
     void addDraftFiles(sessionId, files, useSettings.getState().apiKey ?? '').then((error) => {
@@ -127,23 +141,55 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     [cancelVoice]
   )
 
+  // 从消息上点「编辑」后把焦点交给输入框，省得再点一次
+  useEffect(() => {
+    if (editing) {
+      textareaRef.current?.focus({ preventScroll: true })
+    }
+  }, [editing])
+
   // 移动端录音时用频谱替代输入框内容
   const recording = voice.status === 'recording'
 
-  // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送
-  const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady
+  // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送；
+  // 编辑消息时不带附件，正文非空即可提交
+  const canSend =
+    !importingHistory &&
+    !streaming &&
+    voice.status === 'idle' &&
+    (editing ? text.trim() !== '' : draftReady)
 
   const send = () => {
-    if (
-      useChatStore.getState().importingHistory ||
-      voice.status !== 'idle' ||
-      !prepareDraftMessage(getDraft(sessionId), useUploads.getState().tasks)
-    ) {
+    if (useChatStore.getState().importingHistory || voice.status !== 'idle') {
+      return
+    }
+    if (editing) {
+      const content = getDraft(sessionId).text.trim()
+      if (!sessionId || !content || !ensureApiKey()) {
+        return
+      }
+      if (!editMessage(sessionId, editing.messageId, content, editing.files)) {
+        return
+      }
+      stopReadAloud()
+      endEditMessage(sessionId, false)
+      if (isMobile) {
+        textareaRef.current?.blur()
+      } else {
+        textareaRef.current?.focus()
+      }
       return
     }
     // 文本与上传完成态由提交动作读取最新快照，不使用上一次渲染的草稿。
+    if (!prepareDraftMessage(getDraft(sessionId), useUploads.getState().tasks)) {
+      return
+    }
     if (!ensureApiKey() || !sendMessage(sessionId)) {
       return
+    }
+    // 自定义联网模型是「一次性」开关：这条发出去后自动关掉
+    if (useSettings.getState().networkModelEnabled && useSettings.getState().search) {
+      setSearch(false)
     }
     stopReadAloud()
     if (isMobile) {
@@ -162,12 +208,48 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         }
       }}
     >
-      <DraftAttachments items={attachments} onRetry={retryFile} onRemove={removeFile} />
+      {editing ? (
+        <div className={styles.editBanner}>
+          <span>{t('editingMessage')}</span>
+          <button
+            type="button"
+            className={styles.editCancel}
+            aria-label={t('cancel')}
+            onClick={() => {
+              if (sessionId) {
+                endEditMessage(sessionId, true)
+              }
+            }}
+          >
+            <IconCloseFill14 />
+          </button>
+        </div>
+      ) : null}
+      {editing ? (
+        editing.files.length > 0 ? (
+          <div className={styles.editFiles}>
+            {editing.files.map((file) => (
+              <MessageFile
+                key={file.id}
+                file={file}
+                onRetry={null}
+                onRemove={() => {
+                  if (sessionId) {
+                    removeEditFile(sessionId, file.id)
+                  }
+                }}
+              />
+            ))}
+          </div>
+        ) : null
+      ) : (
+        <DraftAttachments items={attachments} onRetry={retryFile} onRemove={removeFile} />
+      )}
       <div className={styles.textareaWrapper}>
         <textarea
           ref={textareaRef}
           className={clsx(styles.textarea, recording && isMobile && styles.textareaHidden)}
-          placeholder={t('chatInputPlaceholderChat')}
+          placeholder={t(editing ? 'editingMessage' : 'chatInputPlaceholderChat')}
           rows={2}
           // 移动端不自动聚焦，避免一打开就弹出键盘
           autoFocus={!isMobile}
@@ -214,6 +296,8 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               className={clsx(styles.toggle, thinking && styles.selected)}
               aria-label={t('thinkingSwitch')}
               aria-pressed={thinking}
+              // 触摸时不让按钮抢走输入框焦点，否则键盘会收起
+              onPointerDown={(event) => event.preventDefault()}
               onClick={() => setThinking(!thinking)}
             >
               <IconThinkOutline14 />
@@ -226,10 +310,13 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
               className={clsx(styles.toggle, search && styles.selected)}
               aria-label={t('search')}
               aria-pressed={search}
+              onPointerDown={(event) => event.preventDefault()}
               onClick={() => setSearch(!search)}
             >
               <IconGlobeLanguageOutline14 />
-              <span className={styles.toggleLabel}>{t('search')}</span>
+              <span className={styles.toggleLabel}>
+                {networkModelEnabled ? t('searchNextOnce') : t('search')}
+              </span>
             </button>
           </Tooltip>
         </div>
@@ -252,7 +339,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             tone="primary"
             icon={<IconPaperclipOutline16 />}
             tooltip={t('uploadFile')}
-            disabled={importingHistory}
+            disabled={importingHistory || Boolean(editing)}
             onClick={() => ensureApiKey() && fileInputRef.current?.click()}
           />
           <input

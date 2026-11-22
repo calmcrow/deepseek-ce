@@ -2,12 +2,10 @@ import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
 import { memo, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { IconChevronDownOutline14, IconEditOutline16 } from '../base/icons.js'
-import { editMessage, retryUpload } from '../../services/chat/store.js'
-import { stopReadAloud } from '../../services/speech/readAloud.js'
+import { retryUpload } from '../../services/chat/store.js'
+import { beginEditMessage } from '../../services/chat/messageEdit.js'
 import type { UserMessage as UserMessageType } from '../../services/chat/types.js'
-import { Button } from '../base/Button.js'
 import { IconButton } from '../base/IconButton.js'
-import { ensureApiKey } from '../settings/settingsDialogState.js'
 import {
   BranchSwitcher,
   type MessageVersions,
@@ -91,28 +89,9 @@ export const UserMessage = memo(function UserMessage({
   onSelectVersion: SelectMessageVersion
 }) {
   const t = useTranslate()
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(message.content)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const canSend = !busy && (draft.trim() !== '' || message.files.length > 0)
-
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current
-    if (editing && textarea) {
-      textarea.style.height = 'auto'
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 202)}px`
-    }
-  }, [editing, draft])
-
-  const sendEdit = () => {
-    if (canSend && ensureApiKey() && editMessage(sessionId, message.id, draft.trim())) {
-      stopReadAloud()
-      setEditing(false)
-    }
-  }
 
   return (
-    <div className={clsx(styles.container, isFirst && styles.isFirst)}>
+    <div className={clsx(styles.container, isFirst && styles.isFirst)} data-message-id={message.id}>
       {message.files.length > 0 ? (
         <div
           className={clsx(
@@ -129,64 +108,20 @@ export const UserMessage = memo(function UserMessage({
           ))}
         </div>
       ) : null}
-      {editing ? (
-        <div className={styles.editor}>
-          <textarea
-            ref={textareaRef}
-            className={styles.textarea}
-            aria-label={t('editMessage')}
-            autoFocus
-            rows={1}
-            value={draft}
+      {message.content ? <MessageText text={message.content} /> : null}
+      <div className={styles.bottom}>
+        <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
+          {message.content ? <CopyButton text={message.content} /> : null}
+          <IconButton
+            icon={<IconEditOutline16 />}
+            tooltip={t('editMessage')}
+            tooltipPlacement="bottom"
             disabled={busy}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) {
-                return
-              }
-              if (event.key === 'Escape') {
-                setEditing(false)
-              } else if (
-                event.key === 'Enter' &&
-                (event.ctrlKey || event.metaKey) &&
-                !event.nativeEvent.isComposing
-              ) {
-                // 和主输入框一致：回车只换行，Ctrl/⌘+Enter 才提交
-                event.preventDefault()
-                sendEdit()
-              }
-            }}
+            onClick={() => beginEditMessage(sessionId, message.id, message.content, message.files)}
           />
-          <div className={styles.editorActions}>
-            <Button size="s" variant="outlined" onClick={() => setEditing(false)}>
-              {t('cancel')}
-            </Button>
-            <Button size="s" disabled={!canSend} onClick={sendEdit}>
-              {t('send')}
-            </Button>
-          </div>
         </div>
-      ) : (
-        <>
-          {message.content ? <MessageText text={message.content} /> : null}
-          <div className={styles.bottom}>
-            <div className={clsx(styles.actions, isLast && styles.alwaysShow)}>
-              {message.content ? <CopyButton text={message.content} /> : null}
-              <IconButton
-                icon={<IconEditOutline16 />}
-                tooltip={t('editMessage')}
-                tooltipPlacement="bottom"
-                disabled={busy}
-                onClick={() => {
-                  setDraft(message.content)
-                  setEditing(true)
-                }}
-              />
-            </div>
-            <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
-          </div>
-        </>
-      )}
+        <BranchSwitcher versions={versions} disabled={busy} onSelect={onSelectVersion} />
+      </div>
     </div>
   )
 })
