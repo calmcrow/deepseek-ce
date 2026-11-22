@@ -41,6 +41,7 @@ import {
   setRelayEnabled,
   setRelayConfig,
   setSessionOrganizer,
+  setSiderButtonMode,
   type FontSizeKey,
   type Locale,
   type ThemePreference,
@@ -742,6 +743,7 @@ const MoreSettings = () => {
   const organizer = useSettings((state) => state.sessionOrganizer)
   const t = useTranslate()
   const manualCompress = useSettings((state) => state.manualCompress)
+  const siderButtonMode = useSettings((state) => state.siderButtonMode)
   return (
     <>
       <div className={styles.divider} />
@@ -758,6 +760,18 @@ const MoreSettings = () => {
               setManualCompress(checked)
               showToast({ key: checked ? 'manualCompressEnabled' : 'manualCompressDisabled' })
             }}
+          />
+        }
+      />
+      <SettingCell
+        label={t('settingsSiderButton')}
+        description={t('settingsSiderButtonDescription')}
+        status={null}
+        action={
+          <Switch
+            checked={siderButtonMode}
+            ariaLabel={t('settingsSiderButton')}
+            onChange={(checked) => setSiderButtonMode(checked)}
           />
         }
       />
@@ -821,7 +835,7 @@ const RelaySettings = () => {
             onChange={(checked) => {
               if (!checked) {
                 setRelayEnabled(false)
-                showToast({ key: 'manualCompressDisabled' })
+                showToast({ key: 'relayDisabled' })
                 return
               }
               const state = useSettings.getState()
@@ -832,6 +846,7 @@ const RelaySettings = () => {
               void askRelayEnable().then((confirmed) => {
                 if (confirmed) {
                   setRelayEnabled(true)
+                  showToast({ key: 'relayEnabled' })
                 }
               })
             }}

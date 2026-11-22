@@ -265,6 +265,11 @@ export const zh = {
   sessionGroupsDisabled: '已关闭会话整理模式',
   siderFolderUngrouped: '未分组',  manualCompressEnabled: '已开启手动压缩上下文',
   manualCompressDisabled: '已关闭手动压缩上下文',
+  relayEnabled: '已开启中转站，使用自定义模型',
+  relayDisabled: '已关闭中转站，回到 DeepSeek 官方模型',
+  settingsSiderButton: '用左上角按钮打开会话栏',
+  settingsSiderButtonDescription:
+    '默认关闭：只能从屏幕左边沿向右滑动打开会话栏（和官方一致）。打开后会额外显示左上角的菜单按钮。',
   settingsRelay: '使用自定义模型（中转站）',
   settingsRelayDescription:
     '开启后不再使用官方模型，改走下面填的 OpenAI 兼容接口。「深度思考」「联网搜索」开关仍然可用，会作为参数一起发给该模型；能否真的思考和联网取决于它支不支持。',

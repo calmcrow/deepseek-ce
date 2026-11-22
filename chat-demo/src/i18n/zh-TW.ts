@@ -267,6 +267,11 @@ export const zhTw = {
   sessionGroupsDisabled: '已關閉會話整理模式',
   siderFolderUngrouped: '未分組',  manualCompressEnabled: '已開啟手動壓縮上下文',
   manualCompressDisabled: '已關閉手動壓縮上下文',
+  relayEnabled: '已開啟中轉站，使用自訂模型',
+  relayDisabled: '已關閉中轉站，回到 DeepSeek 官方模型',
+  settingsSiderButton: '用左上角按鈕開啟會話欄',
+  settingsSiderButtonDescription:
+    '預設關閉：只能從螢幕左邊緣向右滑動開啟會話欄（與官方一致）。開啟後會額外顯示左上角的選單按鈕。',
   settingsRelay: '使用自訂模型（中轉站）',
   settingsRelayDescription:
     '開啟後不再使用官方模型，改走下面填的 OpenAI 相容介面。「深度思考」「聯網搜尋」開關仍然可用，會作為參數一起送給該模型；能否真的思考與聯網取決於它支不支援。',

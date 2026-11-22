@@ -101,6 +101,8 @@ type Settings = {
   siderCollapsed: boolean
   /** 开启后会话菜单里出现「压缩上下文」；多数人用不到，默认关 */
   manualCompress: boolean
+  /** 移动端用左上角按钮打开会话栏；默认关，改为左边沿右滑打开 */
+  siderButtonMode: boolean
   /** 使用自定义模型（中转站）：开启后不再走官方模型 */
   relayEnabled: boolean
   /** 中转站地址，例如 https://api.example.com（会自动补 /v1/chat/completions） */
@@ -124,6 +126,7 @@ const KEYS = {
   search: 'chat-demo:search',
   autoReadAloud: 'chat-demo:auto-read-aloud',
   manualCompress: 'chat-demo:manual-compress',
+  siderButtonMode: 'chat-demo:sider-button-mode',
   relayEnabled: 'chat-demo:relay-enabled',
   relayBaseUrl: 'chat-demo:relay-base-url',
   relayApiKey: 'chat-demo:relay-api-key',
@@ -327,6 +330,7 @@ export const useSettings = create<Settings>(() => {
     defaultPromptPresetId: initialDefaultPresetId(promptPresets),
     siderCollapsed: read(KEYS.siderCollapsed) === 'true',
     manualCompress: read(KEYS.manualCompress) === 'true',
+    siderButtonMode: read(KEYS.siderButtonMode) === 'true',
     relayEnabled: read(KEYS.relayEnabled) === 'true',
     relayBaseUrl: read(KEYS.relayBaseUrl) ?? '',
     relayApiKey: read(KEYS.relayApiKey) ?? '',
@@ -385,6 +389,12 @@ export const setAutoReadAloud = (autoReadAloud: boolean) => {
 export const setManualCompress = (manualCompress: boolean) => {
   write(KEYS.manualCompress, String(manualCompress))
   useSettings.setState({ manualCompress })
+}
+
+/** 移动端会话栏：默认靠左边沿右滑打开；开了这个才显示左上角按钮 */
+export const setSiderButtonMode = (siderButtonMode: boolean) => {
+  write(KEYS.siderButtonMode, String(siderButtonMode))
+  useSettings.setState({ siderButtonMode })
 }
 
 /** 自定义模型（中转站）开关与参数 */

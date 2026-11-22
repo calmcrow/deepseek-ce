@@ -282,6 +282,11 @@ export const ja = {
   sessionGroupsDisabled: '会話整理モードを無効にしました',
   siderFolderUngrouped: '未分類',  manualCompressEnabled: '手動コンテキスト圧縮を有効にしました',
   manualCompressDisabled: '手動コンテキスト圧縮を無効にしました',
+  relayEnabled: '中継サーバーを有効にしました（カスタムモデルを使用）',
+  relayDisabled: '中継サーバーを無効にし、DeepSeek 公式モデルに戻りました',
+  settingsSiderButton: '左上のボタンで会話バーを開く',
+  settingsSiderButtonDescription:
+    '既定はオフ：画面左端から右へスワイプして会話バーを開きます（公式と同じ）。オンにすると左上のメニューボタンも表示されます。',
   settingsRelay: 'カスタムモデル（中継サービス）を使う',
   settingsRelayDescription:
     '有効にすると公式モデルを使わず、下の OpenAI 互換エンドポイントへ送信します。「深い思考」「ウェブ検索」のスイッチはそのまま使え、パラメータとしてそのモデルに渡します（対応していれば有効になります）。',

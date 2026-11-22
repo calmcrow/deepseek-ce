@@ -24,6 +24,7 @@ import { stopReadAloud } from '../services/speech/readAloud.js'
 import { CollapsedSider } from '../components/sider/CollapsedSider.js'
 import { closeMobileSider } from '../components/sider/mobileSiderState.js'
 import { MobileSider, Sider } from '../components/sider/Sider.js'
+import { useSiderSwipe } from '../components/sider/useSiderSwipe.js'
 import styles from './App.module.css'
 
 export const App = () => {
@@ -66,6 +67,8 @@ export const App = () => {
   useEffect(stopReadAloud, [activeId])
   // 移动端选中会话、切换布局后收起抽屉
   useEffect(closeMobileSider, [activeId, isMobile])
+  // 移动端侧栏：从左边沿右滑打开 / 左滑关闭
+  useSiderSwipe(isMobile)
 
   useEffect(() => {
     void initChat()

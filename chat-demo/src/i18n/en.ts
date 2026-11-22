@@ -282,6 +282,11 @@ export const en = {
   sessionGroupsDisabled: 'Chat organizer disabled',
   siderFolderUngrouped: 'Ungrouped',  manualCompressEnabled: 'Manual context compression enabled',
   manualCompressDisabled: 'Manual context compression disabled',
+  relayEnabled: 'Relay enabled — using your custom model',
+  relayDisabled: 'Relay disabled — back to the official DeepSeek model',
+  settingsSiderButton: 'Open the sidebar with a top-left button',
+  settingsSiderButtonDescription:
+    'Off by default: swipe right from the left edge to open the sidebar (same as the official app). Turning it on also shows the menu button in the top-left corner.',
   settingsRelay: 'Use a custom model (relay)',
   settingsRelayDescription:
     'Stops using the official model and sends requests to the OpenAI-compatible endpoint below. The deep-thinking and web-search switches stay available: they are passed to that model as parameters, and only take effect if it supports them.',

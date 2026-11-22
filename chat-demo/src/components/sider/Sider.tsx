@@ -503,13 +503,30 @@ export const Sider = ({ mobile = false }: { mobile?: boolean }) => {
 /** 移动端抽屉：浮在页面上方，点空白区域关闭。 */
 export const MobileSider = () => {
   const open = useMobileSider((state) => state.open)
-  if (!open) {
+  const drag = useMobileSider((state) => state.drag)
+  // 拖拽过程中（drag 有值）也要渲染，否则抽屉跟不上手指
+  if (!open && drag === null) {
     return null
   }
+  const width = Math.min(300, window.innerWidth - 48)
+  const revealed = drag ?? width
+  const progress = Math.max(0, Math.min(1, revealed / width))
+  const dragging = drag !== null
   return (
     <>
-      <div className={styles.drawerMask} onClick={closeMobileSider} />
-      <div className={styles.drawer}>
+      <div
+        className={clsx(styles.drawerMask, !dragging && styles.maskSettled)}
+        style={{ opacity: progress }}
+        onClick={closeMobileSider}
+      />
+      <div
+        className={clsx(styles.drawer, !dragging && styles.drawerSettled)}
+        style={
+          open && !dragging
+            ? undefined
+            : { transform: `translateX(${Math.min(0, revealed - width)}px)` }
+        }
+      >
         <Sider mobile />
       </div>
     </>
