@@ -15,9 +15,30 @@ export const openSettings = (section: SettingsSection) =>
 
 export const closeSettings = () => useSettingsDialog.setState({ open: false })
 
-/** 没有 API Key 时打开设置并选中 API Key 所在的「数据管理」，返回是否已有 Key */
+/**
+ * 发送前的凭证检查。
+ *
+ * 开了中转站就只认中转站那套配置：地址、模型名非空，Key 可以是中转站 Key，
+ * 也可以沿用官方 Key（有些中转站允许）。以前这里只看官方 Key，导致只用中转站
+ * 的用户每次发消息都被弹到设置页。
+ *
+ * 返回 true 表示可以发；false 表示已把设置页打开到该填的位置。
+ */
 export const ensureApiKey = () => {
-  if (useSettings.getState().apiKey) {
+  const state = useSettings.getState()
+  if (state.relayEnabled) {
+    const ready =
+      state.relayBaseUrl.trim() !== '' &&
+      state.relayModel.trim() !== '' &&
+      (state.relayApiKey.trim() !== '' || Boolean(state.apiKey))
+    if (ready) {
+      return true
+    }
+    // 中转站的配置在「通用设置 → 更多」
+    openSettings('general')
+    return false
+  }
+  if (state.apiKey) {
     return true
   }
   openSettings('data')

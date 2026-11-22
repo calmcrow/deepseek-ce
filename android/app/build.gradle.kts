@@ -13,8 +13,8 @@ android {
         minSdk = 29
         targetSdk = 34
         // 每次要重新装包时都把这两个数字往上加，装完在「应用信息」里能核对
-        versionCode = 46
-        versionName = "3.1.5"
+        versionCode = 47
+        versionName = "3.1.6"
     }
 
     buildTypes {
