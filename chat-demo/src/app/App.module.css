@@ -14,6 +14,7 @@
   min-width: 0;
 }
 
+
 .content {
   position: relative;
   flex: 1;
@@ -42,17 +43,17 @@
 .loadingState {
   display: flex;
   flex: 1;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 8px;
   padding: 24px;
   color: var(--dsw-alias-label-secondary);
   font-size: 14px;
   text-align: center;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .frame {
     position: fixed;
     /* 视口高度是物理像素，界面缩放后要按倍数折回，否则底部会被挤出屏幕 */
@@ -69,4 +70,67 @@
       height: calc(var(--app-viewport-height, 100dvh) / var(--ds-zoom, 1));
     }
   }
+}
+
+/* 移动端抽屉打开：主界面向右滑并整体缩小、圆角浮起，像一张卡片 */
+:global(body.dsh-drawer-open) .main {
+  transform: translateX(calc(280px * var(--drawer-progress, 1)))
+    scale(calc(1 - 0.02 * var(--drawer-progress, 1)));
+  border-radius: calc(16px * var(--drawer-progress, 1));
+  overflow: hidden;
+}
+
+/* 抽屉打开时，主界面缩小露出的缝隙用侧栏底色，和抽屉融为一体 */
+:global(body.dsh-drawer-open) .frame {
+  background-color: var(--dsw-specific-sidebar-fill);
+}
+
+.main {
+  transform-origin: left center;
+  transition:
+    transform 0.21s cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-radius 0.21s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* 拖动抽屉时主界面不做过渡，直接跟手 */
+:global(body.dsh-dragging) .main {
+  transition: none;
+}
+
+/* 加载会话时的转圈 */
+.loadingSpinner {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--dsw-alias-border-l2);
+  border-top-color: var(--dsw-alias-label-secondary);
+  animation: app-spin 0.8s linear infinite;
+}
+
+@keyframes app-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 搜索页打开时，右侧主对话整体隐藏 */
+:global(body.dsh-search-mode) .main {
+  visibility: hidden;
+}
+
+
+/* 抽屉打开时主界面的遮罩：浅色略压暗，深色盖一点白 */
+:global(body.dsh-drawer-open) .main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background-color: rgba(0, 0, 0, 0.05);
+  opacity: var(--drawer-mask, var(--drawer-progress, 1));
+  pointer-events: none;
+}
+
+:global(body[data-ds-dark-theme].dsh-drawer-open) .main::after {
+  background-color: rgba(255, 255, 255, 0.06);
 }

@@ -37,26 +37,27 @@
 }
 
 .inputContainer {
-  position: sticky;
+  /* 覆盖在列表之上：列表能一直延伸到屏幕底 */
+  position: absolute;
   bottom: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  /* 不设 z-index：避免形成层叠上下文，让内部输入框卡片压过搜索高光，
+     同时让这层底色被高光盖住（两侧露出高光） */
+  /* 输入框这一带盖一层底色，挡住下方滚过去的正文 */
+  background-color: var(--dsw-alias-bg-base);
+  padding: 0 12px calc(env(safe-area-inset-bottom) + 4px);
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
-  width: calc(var(--message-list-max-width) - 64px);
-  max-width: calc(100% - 32px);
-  margin: auto auto 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    transparent 30%,
-    var(--dsw-alias-bg-base) 30%,
-    var(--dsw-alias-bg-base) 100%
-  );
 }
 
 .caveat {
+  /* 压过搜索高光的蒙版（16），避免底部小字被遮掉 */
+  position: relative;
+  z-index: 21;
   width: 100%;
   padding: 6px 0;
   font-size: 11px;
@@ -66,12 +67,8 @@
   user-select: none;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .inputContainer {
-    position: relative;
-    bottom: auto;
-    flex-shrink: 0;
-    margin: 0 auto;
     padding-bottom: env(safe-area-inset-bottom);
   }
 }

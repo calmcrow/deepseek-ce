@@ -167,8 +167,9 @@ body {
 }
 
 body[data-ds-dark-theme] {
-  --dsw-alias-bg-base: var(--dsw-static-neutral-bluish-950);
-  --dsw-alias-bg-layer-2: var(--dsw-static-neutral-bluish-850);
+  /* 正文底色向侧栏靠拢，整体更黑一些 */
+  --dsw-alias-bg-base: rgb(13, 13, 15);
+  --dsw-alias-bg-layer-2: rgb(41, 41, 41);
   --dsw-alias-bg-layer-3: var(--dsw-static-neutral-bluish-800);
   --dsw-alias-bg-skeleton: rgba(255, 255, 255, 0.08);
   --dsw-alias-border-inverted: rgba(255, 255, 255, 0.06);
@@ -212,7 +213,8 @@ body[data-ds-dark-theme] {
   --dsw-specific-menu: var(--dsw-alias-bg-layer-3);
   --dsw-alias-tooltip-bg: var(--dsw-static-neutral-bluish-750);
   --dsw-specific-selector: var(--dsw-static-neutral-bluish-750);
-  --dsw-specific-sidebar-fill: var(--dsw-static-neutral-bluish-900);
+  /* 侧栏比正文背景更深一点，和官方对齐 */
+  --dsw-specific-sidebar-fill: rgb(11, 11, 13);
   --dsw-specific-sidebar-nav-item-active-accent: var(--dsw-static-neutral-bluish-800);
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-850);
 }

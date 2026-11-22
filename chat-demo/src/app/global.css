@@ -13,6 +13,10 @@
 body {
   overflow: hidden;
   margin: 0;
+  /* 界面文字默认不可选：欢迎语、设置、提示词按钮等都不该被长按选中 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   word-break: break-word;
   font-family: var(--dsw-font-family);
   font-size: var(--ds-font-size-m);
@@ -43,7 +47,7 @@ body.change-theme *::after {
   transition: none !important;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   html,
   body,
   #root {
@@ -51,4 +55,15 @@ body.change-theme *::after {
     overflow: hidden;
     overscroll-behavior-y: none;
   }
+}
+
+/* 消息正文和输入框仍允许选中复制 */
+[data-message-id],
+[data-message-id] *,
+input,
+textarea,
+[contenteditable='true'] {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
