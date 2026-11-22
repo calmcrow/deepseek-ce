@@ -1,8 +1,11 @@
 .container {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* 高光横向铺到视口两侧，超出的部分裁掉，避免出现横向滚动条 */
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable both-edges;
   scrollbar-color: var(--scroll-color) transparent;
@@ -12,7 +15,7 @@
   display: contents;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .container {
     overflow: hidden;
     scrollbar-gutter: auto;
@@ -23,6 +26,8 @@
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    /* 高光横向铺到视口两侧，超出部分裁掉，避免横向滚动 */
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-y: contain;
     scrollbar-color: var(--scroll-color) transparent;
@@ -30,10 +35,12 @@
 }
 
 .column {
+  position: relative;
   width: calc(var(--message-list-max-width) - 2 * var(--message-list-padding-horizontal));
   max-width: calc(100% - 40px);
   margin: 0 auto;
-  padding-bottom: 24px;
+  /* 给底部覆盖的输入框留出空间，最后一条消息能滚到它上面 */
+  padding-bottom: 140px;
 }
 
 /* 顶部「显示更早的消息」：首屏只渲染最近一段消息，更早的按需追加 */
@@ -53,3 +60,63 @@
   color: var(--dsw-alias-label-primary);
 }
 
+/* 跳转高光：跳转时盖住命中消息，再向下渐变到输入框中部 */
+@keyframes jump-flash {
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.jumpOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 从中间列撑到视口两侧：两侧的正文区域也铺上高光 */
+  margin-inline: calc(-50vw + 50%);
+  height: 100%;
+  /* 盖过输入区底色（不设 z-index），但低于输入框卡片（卡片是 20） */
+  z-index: 15;
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  opacity: 0;
+}
+
+/* 浅色主题：白底上白色高光几乎看不见，用极浅的灰压出一层底色 */
+:global(body:not([data-ds-dark-theme])) .jumpOverlay {
+  background-color: rgba(0, 0, 0, 0.045);
+}
+
+/* 跳转高光的蒙版：固定在屏幕上（不随内容滚动），
+   卡片中线以下完全遮住高光，中线往上 24px 渐隐放开 */
+.jumpMask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  z-index: 16;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    var(--dsw-alias-bg-base) 0,
+    var(--dsw-alias-bg-base) calc(100% - var(--jump-fade, 24px)),
+    transparent 100%
+  );
+}
+
+.jumpOverlayActive {
+  animation: jump-flash 5s ease-in-out;
+}
