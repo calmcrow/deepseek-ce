@@ -3,6 +3,7 @@ import { readMessageEvent } from './parseEvent.js'
 import { readServerSentEvents } from './sse.js'
 import type {
   ApiErrorBody,
+  ChatModel,
   CreateMessageRequest,
   FileObject,
   FilePurpose,
@@ -199,6 +200,78 @@ const hasFile = (body: CreateMessageRequest) =>
       typeof message.content !== 'string' &&
       message.content.some((block) => block.type === 'image' || block.type === 'document')
   )
+
+/** 标题请求的系统提示词：一行纯文本、跟随消息语言、长度可控 */
+const TITLE_SYSTEM_PROMPT = [
+  'Create a concise title for this conversation from the user message.',
+  'Name only the topic; do not include conclusions, answers, or any details from the conversation.',
+  'Return only the title on one line, in plain text, with no quotes, prefix, explanation, Markdown, or code.',
+  'Use the language of the message.',
+  'Keep it short: at most 20 CJK characters or 6 words.',
+  'If the message gives little to name, still return a short best-effort title.',
+].join('\n')
+
+/** 标题只看提问的开头一段；标题是独立请求，不需要读完整对话 */
+const TITLE_INPUT_LIMIT = 2000
+
+/** 从非流式响应里取出第一个非空行的文字块，作为标题 */
+const titleFromResponse = (body: unknown): string | null => {
+  if (typeof body !== 'object' || body === null || !('content' in body)) {
+    return null
+  }
+  const blocks = (body as { content: unknown }).content
+  if (!Array.isArray(blocks)) {
+    return null
+  }
+  const text = blocks
+    .map((block) => {
+      if (typeof block !== 'object' || block === null) {
+        return ''
+      }
+      const { type, text: value } = block as { type?: unknown; text?: unknown }
+      return type === 'text' && typeof value === 'string' ? value : ''
+    })
+    .join(' ')
+  const line = text
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .find((item) => item.length > 0)
+  if (!line) {
+    return null
+  }
+  // 模型偶尔会加引号或星号，去掉包裹后再截断
+  const clean = line.replace(/^["'“”‘’*]+|["'“”‘’*]+$/g, '').slice(0, 60)
+  return clean || null
+}
+
+/**
+ * 独立生成会话标题：与主请求分开，只带用户文字，不受主请求输入预算的限制。
+ * 失败返回 null，由调用方保留本地兜底标题（与官方「标题自行兜底」的建议一致）。
+ */
+export const generateTitle = async (
+  apiKey: string,
+  model: ChatModel,
+  text: string,
+  signal?: AbortSignal
+): Promise<string | null> => {
+  const input = text.trim().slice(0, TITLE_INPUT_LIMIT)
+  if (!input) {
+    return null
+  }
+  const response = await request(`${ANTHROPIC_BASE_URL}/messages`, {
+    method: 'POST',
+    headers: { ...anthropicHeaders(apiKey, false), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      system: TITLE_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: input }],
+      max_tokens: 64,
+      thinking: { type: 'disabled' },
+    }),
+    signal,
+  })
+  return titleFromResponse(await response.json())
+}
 
 /**
  * POST /anthropic/v1/messages（stream: true），逐个产出流式事件，收到 message_stop 时结束。

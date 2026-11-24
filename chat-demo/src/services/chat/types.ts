@@ -123,6 +123,8 @@ export type Session = {
   contextKeepRounds?: number
   /** 已经弹过「上下文用完了」的时间；同一条会话只提示一次。缺省表示还没提示过。 */
   contextPromptedAt?: number
+  /** 压缩成功后先隐藏上下文大小；下一次回答结束后清掉，恢复显示真实 usage */
+  contextUsageCleared?: boolean
   /** 这条会话用哪个系统提示词预设；缺省表示跟设置里的默认预设走 */
   presetId?: string
   /** 压缩时让模型写的「前情提要」，请求时拼进系统提示词；模型因此仍能看到旧内容要点 */

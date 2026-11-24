@@ -19,3 +19,6 @@ tools/edge-profile*/
 *.log
 .DS_Store
 Thumbs.db
+
+# 签名配置不进仓库
+android/keystore.properties
