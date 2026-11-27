@@ -32,15 +32,36 @@ const crcTable = Uint32Array.from({ length: 256 }, (_, value) => {
   return crc >>> 0
 })
 
+/**
+ * 安卓 WebView 里每次 file.slice() 都要过 ContentResolver，单次约 100ms。
+ * 逐条目读（4561 条）会拖到十几分钟，这里用 8 MB 缓存窗口一次读多条目。
+ */
+const CACHE_WINDOW_BYTES = 8 * 1024 * 1024
+let cacheStart = -1
+let cache = new Uint8Array(0)
+
 const readBytes = async (file: File, start: number, length: number) => {
   if (start < 0 || length < 0 || start + length > file.size) {
     invalid()
   }
-  const bytes = new Uint8Array(await file.slice(start, start + length).arrayBuffer())
-  if (bytes.length !== length) {
-    invalid()
+  if (start >= cacheStart && start + length <= cacheStart + cache.length) {
+    return cache.subarray(start - cacheStart, start - cacheStart + length)
   }
-  return bytes
+  const windowStart = Math.max(0, start - (start % CACHE_WINDOW_BYTES))
+  const windowEnd = Math.min(
+    file.size,
+    Math.max(start + length, windowStart + CACHE_WINDOW_BYTES)
+  )
+  cache = new Uint8Array(await file.slice(windowStart, windowEnd).arrayBuffer())
+  cacheStart = windowStart
+  if (start + length > cacheStart + cache.length) {
+    const bytes = new Uint8Array(await file.slice(start, start + length).arrayBuffer())
+    if (bytes.length !== length) {
+      invalid()
+    }
+    return bytes
+  }
+  return cache.subarray(start - cacheStart, start - cacheStart + length)
 }
 
 /** ZIP64、分卷与加密文件不属于导出格式，一律拒绝。 */
