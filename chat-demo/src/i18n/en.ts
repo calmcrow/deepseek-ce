@@ -265,6 +265,8 @@ export const en = {
     "This image could not be converted. Please use a JPG or PNG instead.",
   replyImageUnsupported:
     "The server does not support this image format. Please use a JPG or PNG instead.",
+  replyNoContent:
+    'Nothing left to send: the images were removed and there is no text. Add some text or attach another image.',
   replyImageRepaired:
     'Unsupported images in this chat were converted to JPEG. Resending now.',
   replyImageRemoveTitle: 'The server does not support this image',

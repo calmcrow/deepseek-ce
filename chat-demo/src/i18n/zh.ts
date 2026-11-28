@@ -252,6 +252,7 @@ export const zh = {
   chatInputStopButtonTooltip: '停止生成',
   uploadImageConvertFailed: '这张图片无法转换，请换成 JPG 或 PNG 再发',
   replyImageUnsupported: '这张图片的格式服务器不支持，请换成 JPG 或 PNG 再发',
+  replyNoContent: '这条消息没有可发送的内容：图片被移除了，又没有文字。请补一句文字或换一张图再发。',
   replyImageRepaired: '已把这个会话里不支持的图片转成 JPEG，正在重新发送',
   replyImageRemoveTitle: '这张图片服务器不支持',
   replyImageRemoveDescription: '移除它之后，这条对话还能继续发消息，其他内容不受影响。',

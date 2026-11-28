@@ -266,6 +266,8 @@ export const ja = {
   chatInputStopButtonTooltip: '生成を停止',
   uploadImageConvertFailed: 'この画像は変換できませんでした。JPG か PNG に変換してから送信してください。',
   replyImageUnsupported: 'この画像形式はサーバーが対応していません。JPG か PNG をご利用ください。',
+  replyNoContent:
+    'このメッセージには送信できる内容がありません。画像が削除され、テキストもありません。テキストを追加するか、別の画像を添付してください。',
   replyImageRepaired: 'この会話の未対応画像を JPEG に変換しました。再送信しています。',
   replyImageRemoveTitle: 'この画像はサーバーが対応していません',
   replyImageRemoveDescription:

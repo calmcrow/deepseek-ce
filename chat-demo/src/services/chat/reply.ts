@@ -232,9 +232,19 @@ const isUsableReply = (message: Message): message is AssistantMessage =>
   !message.blocks.some((block) => block.type === 'text' && block.isTemplate) &&
   getReplyText(message) !== ''
 
+/**
+ * 这条用户消息是否还有可发送的内容。
+ * 正文为空、附件又都没有 serverId（上传失败，或被「移除不支持的图片」摘掉了）时，
+ * 拼出来的请求会是 `content: ''`，服务端会直接 400
+ * （all messages must have non-empty content），所以发之前必须先问这一句。
+ */
+export const hasSendableContent = (
+  message: UserMessage,
+  textDocuments?: Map<string, string>
+): boolean => message.content.trim() !== '' || toFileBlocks(message.files, textDocuments).length > 0
+
 /** 有文件时用内容块数组：先文件后文本，文件按 Files API 的 file_id 引用 */
-const toUserParam = (
-  { content, files }: UserMessage,
+const toUserParam = (  { content, files }: UserMessage,
   textDocuments?: Map<string, string>
 ): MessageParam => {
   const blocks = toFileBlocks(files, textDocuments)

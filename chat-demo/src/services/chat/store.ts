@@ -41,6 +41,7 @@ import {
   CONTEXT_KEEP_ROUNDS,
   getContextRounds,
   getSessionContextUsage,
+  hasSendableContent,
   settleReply,
   toCompactMessages,
   toRequestMessages,
@@ -1313,11 +1314,6 @@ const repairSessionImages = async (sessionId: string): Promise<boolean> => {
 /**
  * 修复不了时（本地原件缺失、或系统解不了这种格式）的兜底：
  * 把这些拿不准的图片附件从会话里摘掉，让对话还能继续。原件仍留在本地库里，不影响导出以外的功能。
- * 判定规则：嗅探出来不是白名单、或者根本读不到原件（无法证明它是合法格式）。
- */
-/**
- * 修复不了时（本地原件缺失、或系统解不了这种格式）的兜底：
- * 把这些拿不准的图片附件从会话里摘掉，让对话还能继续。原件仍留在本地库里，不影响导出以外的功能。
  *
  * `preferredIds` 是「本次请求里真的发出去的图片」：服务端刚拒过它们，
  * 用户也点了移除，就优先摘这些。否则（例如已成功转成 JPEG、mime 看起来合法，
@@ -1639,6 +1635,17 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             }
           }
         }
+        // 正文为空、附件又没有 serverId（上传失败，或坏图被摘掉）时，拼出来是空 content，
+        // 服务端会回 400「all messages must have non-empty content」。就地拦下，别把原始英文甩给用户。
+        if (!hasSendableContent(questionForRequest, textDocuments)) {
+          reply = settleReply(reply, 'error', Date.now(), {
+            kind: 'http',
+            status: 400,
+            message: 'empty user content',
+            localMessage: { key: 'replyNoContent' },
+          })
+          break
+        }
         const messages = toRequestMessages(
           prepared.history,
           questionForRequest,
@@ -1762,12 +1769,22 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           }
           continue
         }
-        // 图片格式不被服务端接受：把这个会话里的坏图就地转成 JPEG，再重发一次
-        if (
-          !receivedContent &&
+        // 图片格式不被服务端接受：把这个会话里的坏图就地转成 JPEG，再重发一次。
+        // 判据不能只靠一句固定文案——服务端措辞会变，变了修复流程就完全跳过，
+        // 用户会直接看到原始报错。所以「400 + 报错里提到 image + 请求里确实有图」也算命中。
+        const requestHasImages =
+          request.question.files.some((file) => file.isImage && file.serverId) ||
+          request.history.some(
+            (message) =>
+              message.role === 'user' &&
+              message.files.some((file) => file.isImage && file.serverId)
+          )
+        const imageRejected =
           error instanceof ApiError &&
-          UNSUPPORTED_IMAGE_PATTERN.test(error.message)
-        ) {
+          error.status === 400 &&
+          requestHasImages &&
+          (/image/i.test(error.message) || UNSUPPORTED_IMAGE_PATTERN.test(error.message))
+        if (!receivedContent && imageRejected) {
           if (attempt < FILE_RETRY_LIMIT && (await repairSessionImages(sessionId))) {
             showToast({ key: 'replyImageRepaired' })
             await waitForRetry(attempt, controller.signal)

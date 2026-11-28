@@ -254,6 +254,7 @@ export const zhTw = {
   chatInputStopButtonTooltip: '停止生成',
   uploadImageConvertFailed: '這張圖片無法轉換，請換成 JPG 或 PNG 再傳',
   replyImageUnsupported: '這張圖片的格式伺服器不支援，請換成 JPG 或 PNG 再傳',
+  replyNoContent: '這則訊息沒有可傳送的內容：圖片被移除了，又沒有文字。請補一句文字或換一張圖再傳。',
   replyImageRepaired: '已把這個對話裡不支援的圖片轉成 JPEG，正在重新傳送',
   replyImageRemoveTitle: '這張圖片伺服器不支援',
   replyImageRemoveDescription: '移除它之後，這個對話還能繼續傳訊息，其他內容不受影響。',
