@@ -134,7 +134,9 @@ export async function* streamRelayMessage({
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      // Key 留空时不发 Authorization：公益中转站/公开中转常常不校验，
+      // 而 `Bearer `（空 token）反而会被一部分网关直接判 401。
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     },
     body: JSON.stringify({
       model,

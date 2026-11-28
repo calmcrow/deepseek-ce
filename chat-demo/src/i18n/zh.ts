@@ -329,7 +329,7 @@ export const zh = {
   settingsRelayBaseUrlPlaceholder: 'https://api.example.com',
   settingsRelayBaseUrlHint: '填到域名即可，会自动补上 /v1/chat/completions',
   settingsRelayApiKey: '中转站 Key',
-  settingsRelayApiKeyPlaceholder: '留空则沿用官方 Key',
+  settingsRelayApiKeyPlaceholder: '留空则沿用官方 Key；都没有就不发送鉴权头（公益中转站可用）',
   settingsRelayModel: '模型 ID',
   settingsRelayModelPlaceholder: '例如 gpt-4o-mini、qwen-max',
   settingsRelayIncomplete: '请先填好接口地址、Key 和模型名',

@@ -40,10 +40,9 @@ export const closeSettings = () => {
 export const ensureApiKey = () => {
   const state = useSettings.getState()
   if (state.relayEnabled) {
-    const ready =
-      state.relayBaseUrl.trim() !== '' &&
-      state.relayModel.trim() !== '' &&
-      (state.relayApiKey.trim() !== '' || Boolean(state.apiKey))
+    // Key 是**可选**的：不少公益中转站不需要鉴权，公开的中转也常常只认地址和模型。
+    // 这里只要求地址和模型填了，Key 留空就发不带 Authorization 的请求（见 api/relay.ts）。
+    const ready = state.relayBaseUrl.trim() !== '' && state.relayModel.trim() !== ''
     if (ready) {
       return true
     }

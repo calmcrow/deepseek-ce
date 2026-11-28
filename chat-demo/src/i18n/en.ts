@@ -346,7 +346,8 @@ export const en = {
   settingsRelayBaseUrlPlaceholder: 'https://api.example.com',
   settingsRelayBaseUrlHint: 'Just the domain — /v1/chat/completions is appended automatically',
   settingsRelayApiKey: 'Relay API key',
-  settingsRelayApiKeyPlaceholder: 'Leave empty to reuse the official key',
+  settingsRelayApiKeyPlaceholder:
+    'Leave empty to reuse the official key; with no key at all, requests carry no Authorization header (works with free relays)',
   settingsRelayModel: 'Model ID',
   settingsRelayModelPlaceholder: 'e.g. gpt-4o-mini, qwen-max',
   settingsRelayIncomplete: 'Fill in endpoint, key and model name first',

@@ -331,7 +331,7 @@ export const zhTw = {
   settingsRelayBaseUrlPlaceholder: 'https://api.example.com',
   settingsRelayBaseUrlHint: '填到網域即可，會自動補上 /v1/chat/completions',
   settingsRelayApiKey: '中轉站 Key',
-  settingsRelayApiKeyPlaceholder: '留空則沿用官方 Key',
+  settingsRelayApiKeyPlaceholder: '留空則沿用官方 Key；都沒有的話不送出驗證標頭（公益中轉站可用）',
   settingsRelayModel: '模型 ID',
   settingsRelayModelPlaceholder: '例如 gpt-4o-mini、qwen-max',
   settingsRelayIncomplete: '請先填好介面位址、Key 與模型名稱',

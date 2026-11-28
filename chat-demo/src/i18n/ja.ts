@@ -346,7 +346,8 @@ export const ja = {
   settingsRelayBaseUrlPlaceholder: 'https://api.example.com',
   settingsRelayBaseUrlHint: 'ドメインまで入力すれば /v1/chat/completions は自動で補われます',
   settingsRelayApiKey: '中継サービスの Key',
-  settingsRelayApiKeyPlaceholder: '空欄なら公式 Key を使用',
+  settingsRelayApiKeyPlaceholder:
+    '空欄なら公式 Key を使用。どちらも無い場合は認証ヘッダーを付けずに送信します（無料の中継サービス向け）',
   settingsRelayModel: 'モデル ID',
   settingsRelayModelPlaceholder: '例: gpt-4o-mini、qwen-max',
   settingsRelayIncomplete: 'エンドポイント・Key・モデル名を先に入力してください',
