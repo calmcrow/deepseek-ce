@@ -18,7 +18,7 @@
 <sub>手机扫码安装</sub>
 </td>
 <td>
-<h3><a href="../../releases/latest">⬇ 下载 DeepSeek CE 3.1.6（安卓 APK）</a></h3>
+<h3><a href="../../releases/latest">⬇ 下载 DeepSeek CE 最新版（安卓 APK）</a></h3>
 <code>10.3 MB</code> · Android 10+（API 29 起）· 直接覆盖安装，聊天记录不丢<br>
 <sub>桌面图标名字是 <b>DeepSeek CE</b>（Community Edition / 非官方社区版）</sub>
 </td>
