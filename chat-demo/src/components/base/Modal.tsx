@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslate } from '../../i18n/index.js'
 import { IconCloseOutline16 } from './icons.js'
@@ -17,6 +17,8 @@ export const Modal = ({
   closable = false,
   className,
   mainClassName,
+  style,
+  closing = false,
   onClose,
 }: {
   title: ReactNode
@@ -27,18 +29,39 @@ export const Modal = ({
   className?: string
   /** 内容区的 class */
   mainClassName?: string
+  /** 内容区的内联样式（CSS 构建可能丢规则时用） */
+  style?: React.CSSProperties
+  /** 正在关闭：遮罩和内容一起渐隐 */
+  closing?: boolean
   onClose: () => void
 }) => {
   const t = useTranslate()
   const titleId = useId()
+  /** 关闭时先播放滑出动画，结束再真正卸载 */
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  const close = useCallback(() => {
+    onCloseRef.current()
+  }, [])
+  // 供系统返回键调用：走同一个关闭动画
+  useEffect(() => {
+    const scope = window as unknown as { __dsCloseModal?: () => void }
+    const previous = scope.__dsCloseModal
+    scope.__dsCloseModal = () => {
+      document.activeElement instanceof HTMLElement && document.activeElement.blur()
+      close()
+    }
+    return () => {
+      scope.__dsCloseModal = previous
+    }
+  }, [close])
+
   useEffect(() => {
     const token = {}
     openModals.push(token)
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && openModals.at(-1) === token) {
-        onCloseRef.current()
+        close()
       }
     }
     document.addEventListener('keydown', onKeyDown)
@@ -51,10 +74,15 @@ export const Modal = ({
   return createPortal(
     <div
       className={styles.overlay}
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      style={{
+        opacity: closing ? 0 : 1,
+        transition: 'opacity 0.15s ease',
+      }}
+      onMouseDown={(event) => event.target === event.currentTarget && close()}
     >
       <div
         className={clsx(styles.content, className)}
+        style={style}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -69,7 +97,7 @@ export const Modal = ({
               tone="primary"
               icon={<IconCloseOutline16 />}
               aria-label={t('close')}
-              onClick={onClose}
+              onClick={close}
             />
           ) : null}
         </div>

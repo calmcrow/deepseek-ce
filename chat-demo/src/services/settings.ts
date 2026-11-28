@@ -111,7 +111,7 @@ type Settings = {
   titleByExtraRequest: boolean
   /** 启用标题生成：主请求带 title.enabled=true，服务端顺带生成（新接口） */
   titleServerEnabled: boolean
-  /** 标题生成方式：经典（服务端 title.enabled）或回退（额外请求） */
+  /** 标题生成方式：新接口（服务端 title.enabled）或旧接口（额外请求） */
   titleMode: 'server' | 'extra'
   /** 不使用经典模式的模型清单（每行一个），这些模型不发 title.enabled */
   titleClassicExcludedModels: string
@@ -445,7 +445,7 @@ export const setTitleServerEnabled = (titleServerEnabled: boolean) => {
   useSettings.setState({ titleServerEnabled })
 }
 
-/** 标题生成方式：经典 / 回退（二选一） */
+/** 标题生成方式：新接口 / 旧接口（二选一） */
 export const setTitleMode = (titleMode: 'server' | 'extra') => {
   write(KEYS.titleMode, titleMode)
   useSettings.setState({ titleMode })

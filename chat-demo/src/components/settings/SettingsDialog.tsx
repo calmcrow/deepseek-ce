@@ -458,7 +458,7 @@ const ModelSetting = () => {
   const [refreshing, setRefreshing] = useState(false)
 
   // 名称以接口返回为准：官方改版后这里自动跟着变，不用改代码
-  const labelOf = (item: ModelInfo) => item.id
+  const labelOf = (item: ModelInfo) => item.name ?? item.id
 
   const refresh = async () => {
     if (refreshing) {
@@ -524,7 +524,7 @@ const NetworkModelSetting = () => {
   const [refreshing, setRefreshing] = useState(false)
 
   // 名称以接口返回为准
-  const labelOf = (item: ModelInfo) => item.id
+  const labelOf = (item: ModelInfo) => item.name ?? item.id
 
   const refresh = async () => {
     if (refreshing) {
