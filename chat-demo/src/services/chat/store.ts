@@ -1680,6 +1680,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               const requestModel = initial.model ?? useSettings.getState().model
               const toolCapable = supportsServerTools(requestModel)
               const wantsSearch = initial.search ?? false
+              // 服务端工具会把请求送进「扩展链路」，那条链路对 document 块支持受限、且共用 32768 输入预算，
+              // 所以带文档时必须放弃工具。但**图片走的是 image 块**，不在这条预算里——
+              // 之前一刀切用 files.length > 0，导致只要发图就不能联网，属于条件过宽。
+              // 已改成「正文直发」的文档不会再发 document 块，也就不占那条预算，同样不算
+              const hasDocumentAttachments = prepared.question.files.some(
+                (file) => !file.isImage && !textDocuments.has(file.id)
+              )
               // v4-pro 带上服务端工具/标题生成会被直接拒，这些能力一并关掉并说明原因
               if (
                 !toolCapable &&
@@ -1689,8 +1696,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
               ) {
                 showToast({ key: 'modelNoServerTools', type: 'error' })
               }
-              // 服务端工具同样吃 32768 的输入预算，带附件时发出去会把大文档一起拒掉
-              if (toolCapable && wantsSearch && prepared.question.files.length > 0) {
+              if (toolCapable && wantsSearch && hasDocumentAttachments) {
                 showToast({ key: 'searchSkippedWithFiles' })
               }
               return streamMessage(
@@ -1720,7 +1726,7 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                   tools:
                     !useSettings.getState().networkModelEnabled &&
                     toolCapable &&
-                    prepared.question.files.length === 0
+                    !hasDocumentAttachments
                       ? serverTools(wantsSearch, prepared.question.content)
                       : [],
                 },
