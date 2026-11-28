@@ -330,6 +330,16 @@ export const Sider = memo(function Sider({ mobile = false }: { mobile?: boolean 
     document.body.classList.toggle('dsh-search-mode', searchMode)
     return () => document.body.classList.remove('dsh-search-mode')
   }, [mobile, searchMode])
+  const visibleIds = useMemo(
+    () =>
+      searchingActive
+        ? (hits ?? []).map((hit) => hit.id)
+        : [...pinned, ...groups.flatMap((group) => group.sessions)].map((session) => session.id),
+    [searchingActive, hits, pinned, groups]
+  )
+  const allSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))
+
   const toggleSelectMode = () => {
     setSelectMode((on) => {
       if (on) {

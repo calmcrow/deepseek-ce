@@ -17,6 +17,7 @@ import { Welcome } from '../components/session/Welcome.js'
 import { ensureApiKey } from '../components/settings/settingsDialogState.js'
 import { SettingsDialog } from '../components/settings/SettingsDialog.js'
 import { Toast } from '../components/base/Toast.js'
+import { CompressionBar } from '../components/session/CompressionBar.js'
 import { showToast } from '../components/base/toastState.js'
 import { onUploadNotice } from '../services/attachments.js'
 import { Button } from '../components/base/Button.js'
@@ -76,6 +77,7 @@ export const App = () => {
 
   return (
     <>
+      <CompressionBar />
       <div ref={frameRef} className={styles.frame}>
         {isMobile ? <MobileSider /> : siderCollapsed ? null : <Sider />}
         <main className={styles.main}>
@@ -98,6 +100,7 @@ export const App = () => {
               <div className={styles.loadingView}>
                 {isMobile ? <MobileHeader /> : null}
                 <div className={styles.loadingState} role="status" aria-live="polite">
+                  <span className={styles.loadingSpinner} aria-hidden />
                   <span>
                     {(!ready ? initError : sessionLoadError)
                       ? t(!ready ? 'sessionListLoadFailed' : 'sessionLoadFailed')
@@ -122,12 +125,13 @@ export const App = () => {
               </div>
             ) : session ? (
               <SessionView
+                key={session.id}
                 session={session}
                 streaming={streaming}
                 siderCollapsed={siderCollapsed}
               />
             ) : (
-              <Welcome />
+              <Welcome key="welcome" />
             )}
           </div>
         </main>
