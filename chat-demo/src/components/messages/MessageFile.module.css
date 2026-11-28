@@ -98,6 +98,32 @@ button.image {
   }
 }
 
+/* 编辑消息时：附件右上角给一个移除按钮 */
+.editable {
+  position: relative;
+}
+
+.remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary-inverted);
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.72);
+  }
+}
+
 .spinner {
   width: 20px;
   height: 20px;

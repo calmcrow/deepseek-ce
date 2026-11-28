@@ -12,6 +12,9 @@
   border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
   background: var(--dsw-specific-input-major);
   overflow: hidden;
+  /* 压过搜索高光（高光是 15）：卡片中间不穿光，两侧露出高光 */
+  position: relative;
+  z-index: 20;
 }
 
 .session {
@@ -28,6 +31,46 @@
 
   [data-ds-dark-theme] & {
     box-shadow: none;
+  }
+}
+
+.editFiles {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 12px 0;
+  overflow-x: auto;
+  cursor: default;
+}
+
+.editBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+  cursor: default;
+}
+
+.editCancel {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--dsw-alias-label-primary-inverted);
+  background: var(--dsw-alias-button-contrast-fill);
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
   }
 }
 
@@ -228,7 +271,7 @@
   max-height: 336px;
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .wrapper {
     flex-shrink: 0;
     /* dvh 放进 @supports：老内核不支持时整块跳过，否则 var() 替换出非法值会让属性变 unset */
@@ -279,8 +322,9 @@
   height: 34px;
   padding: 0 12px;
   border-radius: 18px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  background-color: transparent;
+  border: none;
+  /* 和官方一致：无边框，浅灰/深灰填充 */
+  background-color: var(--dsw-alias-bg-layer-2, rgba(127, 127, 127, 0.14));
   color: var(--dsw-alias-label-primary);
   font: inherit;
   font-size: 13px;
@@ -304,7 +348,7 @@
   &.selected {
     background-color: var(--dsw-alias-button-ghost-active-fill);
     color: var(--dsw-alias-brand-text);
-    border-color: var(--dsw-alias-button-ghost-active-border);
+    border: none;
 
     &:hover {
       background-color: var(--dsw-alias-button-ghost-active-hover);
