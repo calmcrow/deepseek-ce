@@ -280,8 +280,6 @@ export const en = {
   contextSummarizing: 'Asking the model for a recap…',
   contextSummaryFailed: 'Recap failed; the context was still compressed',
   settingsMore: 'More',
-  relayEnabled: 'Relay enabled, using a custom model',
-  relayDisabled: 'Relay disabled, back to the official DeepSeek model',
   settingsTitleMode: 'Title generation',
   settingsTitleModeDescription: 'New interface: uses the official endpoint with title.enabled (not billed); only models that support title generation (e.g. deepseek-flash) are used, deepseek-v4-pro is skipped automatically.\nFallback: generates the title with an extra request after the answer, consuming extra tokens.',
   settingsTitleModeServer: 'New interface',

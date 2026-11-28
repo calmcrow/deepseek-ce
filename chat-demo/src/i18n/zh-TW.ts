@@ -266,8 +266,6 @@ export const zhTw = {
   contextSummarizing: '正在讓模型寫前情提要…',
   contextSummaryFailed: '寫提要失敗，已只壓縮上下文',
   settingsMore: '更多',
-  relayEnabled: '已開啟中轉站，使用自訂模型',
-  relayDisabled: '已關閉中轉站，回到 DeepSeek 官方模型',
   settingsTitleMode: '標題生成',
   settingsTitleModeDescription: '新介面：使用官方新介面，請求帶 title.enabled 參數，不計費，僅對支援標題生成的模型生效（如 deepseek-flash）；deepseek-v4-pro 不支援，會自動跳過。\n回退：回答結束後額外發一次請求生成，會多一次請求並額外消耗 token。',
   settingsTitleModeServer: '新介面',

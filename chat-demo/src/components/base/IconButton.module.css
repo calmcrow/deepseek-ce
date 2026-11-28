@@ -12,11 +12,13 @@
   transition: background-color var(--ds-transition-duration) var(--ds-ease-in-out);
   outline: none;
 
-  &:active:not(:disabled) {
-    background-color: var(--dsw-alias-interactive-bg-hover);
-  }
+  /* 只在鼠标这类精细指针上给按下/悬停高光；
+     触摸设备点开原生选择器后 WebView 收不到 touchend，高光会一直卡住 */
+  @media (hover: hover) and (pointer: fine) {
+    &:active:not(:disabled) {
+      background-color: var(--dsw-alias-interactive-bg-hover);
+    }
 
-  @media (hover: hover) {
     &:hover:not(:disabled) {
       background-color: var(--dsw-alias-interactive-bg-hover);
     }
@@ -30,6 +32,14 @@
     cursor: not-allowed;
     color: var(--dsw-alias-label-caption);
   }
+}
+
+/* 不需要点击/悬停高光的按钮（如顶栏菜单键） */
+.flat:active:not(:disabled),
+.flat:hover:not(:disabled),
+.flat:focus-visible {
+  background-color: transparent;
+  box-shadow: none;
 }
 
 .xs {

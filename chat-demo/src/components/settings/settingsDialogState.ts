@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useSettings } from '../../services/settings.js'
+import { closeMobileSider } from '../sider/mobileSiderState.js'
 
 /** 设置弹窗的分组：通用设置 / 数据管理 */
 export type SettingsSection = 'general' | 'data'
@@ -7,13 +8,25 @@ export type SettingsSection = 'general' | 'data'
 /** 设置弹窗：侧边栏底部、没有 API Key 时的操作与 401 提示都可以打开；section 为打开时选中的分组 */
 export const useSettingsDialog = create(() => ({
   open: false,
+  /** 正在播放退出动画：动画结束才真正卸载 */
+  closing: false,
   section: 'general' as SettingsSection,
 }))
 
 export const openSettings = (section: SettingsSection) =>
   useSettingsDialog.setState({ open: true, section })
 
-export const closeSettings = () => useSettingsDialog.setState({ open: false })
+export const closeSettings = () => {
+  if (!useSettingsDialog.getState().open) {
+    return
+  }
+  useSettingsDialog.setState({ closing: true })
+  // 和设置一起直接收起侧栏，回到主界面
+  closeMobileSider()
+  window.setTimeout(() => {
+    useSettingsDialog.setState({ open: false, closing: false })
+  }, 170)
+}
 
 /**
  * 发送前的凭证检查。

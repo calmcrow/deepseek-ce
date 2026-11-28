@@ -264,8 +264,6 @@ export const zh = {
   contextSummarizing: '正在让模型写前情提要…',
   contextSummaryFailed: '写提要失败，已只压缩上下文',
   settingsMore: '更多',
-  relayEnabled: '已开启中转站，使用自定义模型',
-  relayDisabled: '已关闭中转站，回到 DeepSeek 官方模型',
   settingsTitleMode: '标题生成',
   settingsTitleModeDescription: '新接口：使用官方新接口，请求带 title.enabled 参数，不计费，仅对支持标题生成的模型生效（如 deepseek-flash）；deepseek-v4-pro 不支持，会自动跳过。\n回退：回答结束后额外发一次请求生成，会多一次请求并额外消耗 token。',
   settingsTitleModeServer: '新接口',

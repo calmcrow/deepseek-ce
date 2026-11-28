@@ -4,6 +4,8 @@
 
 .menu {
   position: fixed;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform-origin: center;
   z-index: 900;
   box-sizing: border-box;
   min-width: 124px;
@@ -51,4 +53,18 @@
   &:hover {
     background-color: var(--dsw-alias-interactive-bg-hover-danger);
   }
+}
+
+/* 关闭时朝右上角缩小并淡出 */
+.menuClosing {
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+
+/* 菜单打开时的透明遮罩：拦住外部点击 */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 899;
 }

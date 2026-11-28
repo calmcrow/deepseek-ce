@@ -280,8 +280,6 @@ export const ja = {
   contextSummarizing: 'モデルに前情提要を書かせています…',
   contextSummaryFailed: '要約に失敗しました（圧縮のみ実行）',
   settingsMore: 'その他',
-  relayEnabled: '中継サーバーを有効にしました（カスタムモデルを使用）',
-  relayDisabled: '中継サーバーを無効にし、DeepSeek 公式モデルに戻りました',
   settingsTitleMode: 'タイトル生成',
   settingsTitleModeDescription: '新インターフェース：公式の新インターフェースを使用し、リクエストに title.enabled を含めます（課金なし）。タイトル生成対応モデル（deepseek-flash など）でのみ有効で、deepseek-v4-pro は自動でスキップされます。\nフォールバック：回答後に追加リクエストで生成するため、リクエスト 1 回分の token を余分に消費します。。',
   settingsTitleModeServer: '新インターフェース',
