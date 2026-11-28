@@ -69,7 +69,8 @@ export const Modal = ({
       openModals.splice(openModals.indexOf(token), 1)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [])
+    // close 是 useCallback([]) 出来的稳定引用，放进来不会导致反复注册
+  }, [close])
 
   return createPortal(
     <div

@@ -84,7 +84,11 @@ export const checkArchiveFormat = async (file: File): Promise<void> => {
 const IMAGE_BATCH_FILES = 24
 const IMAGE_BATCH_BYTES = 32 * 1024 * 1024
 
-export const importArchive = async (file: File, onProgress?: ArchiveProgress): Promise<void> => {
+export const importArchive = async (
+  file: File,
+  onProgress?: ArchiveProgress,
+  signal?: AbortSignal
+): Promise<void> => {
   if (!(await isZipFile(file))) {
     fail('backupUnrecognized')
   }
@@ -125,7 +129,7 @@ export const importArchive = async (file: File, onProgress?: ArchiveProgress): P
   }
 
   try {
-    for await (const entry of readArchive(file, onProgress)) {
+      for await (const entry of readArchive(file, onProgress, signal)) {
       const { path } = entry
       const sessionId = parseSessionPath(path)
       if (!manifest) {
@@ -214,7 +218,8 @@ const withImageTypes = (session: Session, originals: ReadonlyMap<string, Blob>):
  */
 export const importSingleSession = async (
   file: File,
-  onProgress?: ArchiveProgress
+  onProgress?: ArchiveProgress,
+  signal?: AbortSignal
 ): Promise<SingleSessionArchive> => {
   if (!(await isZipFile(file))) {
     fail('backupUnrecognized')
@@ -225,7 +230,7 @@ export const importSingleSession = async (
   /** 图片原件：文件 ID → 带 MIME 的 Blob */
   const originals = new Map<string, Blob>()
   try {
-    for await (const entry of readArchive(file, onProgress)) {
+      for await (const entry of readArchive(file, onProgress, signal)) {
       const { path } = entry
       const sessionId = parseSessionPath(path)
       if (!manifest) {

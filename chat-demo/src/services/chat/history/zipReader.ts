@@ -279,15 +279,20 @@ export type ArchiveProgress = (done: number, total: number) => void
 /**
  * 按条目在文件中的物理顺序逐条、逐块解压，跳过目录条目。
  * 调用方必须消费完当前条目的数据，再请求下一个条目。
+ *
+ * 传了 signal 时，每读完一个条目检查一次中断；取消后调用方会拿到 AbortError，
+ * 由上层决定是收起进度还是提示失败。
  */
 export async function* readArchive(
   file: File,
-  onProgress?: ArchiveProgress
+  onProgress?: ArchiveProgress,
+  signal?: AbortSignal
 ): AsyncGenerator<ArchiveEntry> {
   const directory = await readDirectory(file)
   const total = directory.entries.filter((entry) => !entry.path.endsWith('/')).length
   let done = 0
   for (const [index, entry] of directory.entries.entries()) {
+    signal?.throwIfAborted()
     const boundary = directory.entries[index + 1]?.offset ?? directory.offset
     const start = await readEntryOffset(file, entry, boundary)
     if (entry.path.endsWith('/')) {

@@ -1512,9 +1512,6 @@ const attachSearchResult = (
         const index = Number(num)
         return index >= 1 && index <= pages.length ? `[citation:${index}]` : match
       })
-  const textBlocks = reply.blocks.filter((block) => block.type === 'text')
-  const citationText = textBlocks.map((block) => (block.type === 'text' ? block.text : '')).join('')
-  const citations = citationText.match(/\[citation:\d+\]/g)?.length ?? 0
   // 引用只在模型自己写的位置渲染；随机分配会误导用户，不做兜底
   const blocksWithRefs = reply.blocks.map((block) =>
     block.type === 'text' ? { ...block, text: toCitation(block.text) } : block
@@ -1559,8 +1556,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
   const existingTitle = getSession(sessionId)?.title
   const isFirstPrompt = !existingTitle || existingTitle === translate('untitledChat')
   if (!existingTitle) {
-    const { content, files } = request.question
-    const text = content.trim().replace(/\s+/g, ' ')
     // 还没生成标题时用占位，不拿用户提问截断当标题
     const fallback = translate('untitledChat')
     if (fallback) {
@@ -1601,7 +1596,6 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
         updateReply(sessionId, reply)
         persist(sessionId)
         // 实验性：当前模型不支持联网工具时，用「联网使用的模型」检索，把资料拼进提问交给当前模型
-        const requestModelEarly = initial.model ?? useSettings.getState().model
         const wantsWebAccess =
           (initial.search ?? false) || hasUrl(prepared.question.content)
         // 只有开启自定义联网模型时才单独检索；关闭时由对话模型自己联网（主请求带工具）
@@ -1899,7 +1893,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
           `用户问题：${questionText}\n\n助手回答：${answerText.slice(0, 4000)}`
         )
           .then((raw) => {
-            const title = sanitizeTitle(raw)
+            // generateTitle 失败时返回 null，保持本地兜底标题不动
+            const title = raw ? sanitizeTitle(raw) : ''
             if (!title) {
               return
             }
@@ -1910,8 +1905,8 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
             )
             persist(sessionId)
           })
-          .catch((error) => {
-          })
+          // 标题失败不打扰用户：保留本地兜底标题即可
+          .catch(() => {})
       }
     }
     if (serverTitle) {

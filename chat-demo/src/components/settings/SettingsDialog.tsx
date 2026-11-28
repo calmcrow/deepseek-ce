@@ -40,7 +40,6 @@ import {
   setManualCompress,
   setNetworkModel,
   setNetworkModelEnabled,
-  setTitleByExtraRequest,
   setTitleMode,
   setTitleClassicExcludedModels,
   setRelayEnabled,
