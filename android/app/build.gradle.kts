@@ -27,8 +27,8 @@ android {
         minSdk = 29
         targetSdk = 34
         // 每次要重新装包时都把这两个数字往上加，装完在「应用信息」里能核对
-        versionCode = 48
-        versionName = "3.2.0"
+        versionCode = 49
+        versionName = "3.2.1"
         // 每次构建自动生成，用于让 WebView 不要缓存旧页面
         buildConfigField("String", "BUILD_STAMP", "\"${System.currentTimeMillis()}\"")
     }

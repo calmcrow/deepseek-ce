@@ -1710,6 +1710,13 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                     if (useSettings.getState().titleMode === 'extra') {
                       return { enabled: false }
                     }
+                    // 带文档时不要请求服务端标题：它会和文档解析共用那 32768 的输入预算，
+                    // 大文档会被整单拒掉（user input too long）。
+                    // 排除清单默认只写了 deepseek-v4-pro，所以现象是「pro 能传大文件、flash 不能」——
+                    // 差的不是解析能力，是 flash 多带了这一个字段。
+                    if (hasDocumentAttachments) {
+                      return { enabled: false }
+                    }
                     // 只在清单里明确填了该模型时才跳过经典；清单为空 = 不排除任何模型
                     const excluded = useSettings
                       .getState()
