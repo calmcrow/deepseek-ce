@@ -282,6 +282,12 @@ export const ja = {
   contextSummarizing: 'モデルに前情提要を書かせています…',
   contextSummaryFailed: '要約に失敗しました（圧縮のみ実行）',
   settingsMore: 'その他',
+  settingsMoreDescription:
+    '手動圧縮・タイトル生成・カスタム Web モデル・中継サービスなど、あまり使わない設定',
+  settingsCredits: 'クレジット',
+  creditsAuthor: '作者',
+  creditsAssistants: '開発協力',
+  creditsThanks: '上記の皆さんの度重なるテスト・フィードバック・開発協力に感謝します！',
   settingsTitleClassicExcluded: 'クラシックを使用しないモデル',
   settingsTitleClassicExcludedDescription: '1 行に 1 つのモデル ID（改行区切り）。これらのモデルは title.enabled を送らず、タイトルは「新規会話」のままです。',
   settingsTitleClassicExcludedPlaceholder: '例：deepseek-v4-pro',

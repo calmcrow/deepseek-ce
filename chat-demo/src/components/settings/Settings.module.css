@@ -794,3 +794,67 @@ input.apiKeyInput {
   background: var(--dsw-alias-bg-layer-3, rgba(127, 127, 127, 0.2));
   color: var(--dsw-alias-label-primary);
 }
+
+/* 「更多」「开发者名单」这类可点击入口：整行可点，右侧一个箭头 */
+.drawerEntry {
+  width: 100%;
+  border: none;
+  background-color: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.drawerEntry:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover);
+}
+
+.drawerChevron {
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 抽屉内容区单独滚动，标题栏保持不动 */
+.drawerMain {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* 开发者名单 */
+.credits {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px 12px;
+}
+
+.creditsRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.creditsRole {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.creditsName {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-primary);
+}
+
+.creditsThanks {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dsw-alias-label-secondary);
+}

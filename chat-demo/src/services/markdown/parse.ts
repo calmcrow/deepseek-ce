@@ -58,12 +58,43 @@ export function toMdAst(
     )
   }
   const raw = (node: Nodes) => input.slice(node.position?.start.offset, node.position?.end.offset)
+  /**
+   * 解析器只认标准 `**粗体**`。模型和输入法常见两种变体会原样漏成星号：
+   *   1. 全角星号 `＊＊粗体＊＊`
+   *   2. 定界符内侧带空格 `** 粗体 **`
+   * 这里在**文本节点**上补齐（代码块是 code/inlineCode 节点，不会走到这里，所以不会误伤代码）。
+   */
+  const bolded = (value: string): Nodes[] | null => {
+    if (!value.includes('*') && !value.includes('＊')) {
+      return null
+    }
+    const pattern = /(?:\*\*|＊＊)[ \t]*([^\n]+?)[ \t]*(?:\*\*|＊＊)/g
+    const parts: Nodes[] = []
+    let last = 0
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(value)) !== null) {
+      if (match.index > last) {
+        parts.push(text(value.slice(last, match.index)))
+      }
+      parts.push({ type: 'strong', children: [text(match[1])] })
+      last = match.index + match[0].length
+    }
+    if (parts.length === 0) {
+      return null
+    }
+    if (last < value.length) {
+      parts.push(text(value.slice(last)))
+    }
+    return parts
+  }
   // 先处理子节点，再按需把当前节点换成若干节点
   const simplify = (node: Nodes): Nodes[] => {
     if ('children' in node) {
       ;(node as Parent).children = node.children.flatMap(simplify) as RootContent[]
     }
     switch (node.type) {
+      case 'text':
+        return bolded(node.value) ?? [node]
       case 'link':
         return disableLink ? node.children : [node]
       case 'delete': {

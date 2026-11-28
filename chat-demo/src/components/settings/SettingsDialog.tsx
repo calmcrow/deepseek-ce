@@ -109,6 +109,9 @@ const SettingsContent = ({ closing = false }: { closing?: boolean }) => {
   const replacingHistory = useChatStore((state) => state.importingHistory)
   const historyBusy =
     historyImport.busy || singleImport.busy || historyDelete.busy || replacingHistory
+  /** 「更多」和「开发者名单」各自是一个抽屉，内容不再直接铺在设置页里 */
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [creditsOpen, setCreditsOpen] = useState(false)
   return (
     <>
       <Modal
@@ -153,7 +156,11 @@ const SettingsContent = ({ closing = false }: { closing?: boolean }) => {
               <AutoReadSetting />
               <SystemPromptSetting />
               <LocationSetting />
-              <MoreSettings />
+              <DrawerEntry
+                label={t('settingsMore')}
+                description={t('settingsMoreDescription')}
+                onClick={() => setMoreOpen(true)}
+              />
             </>
           ) : (
             <>
@@ -197,8 +204,31 @@ const SettingsContent = ({ closing = false }: { closing?: boolean }) => {
               {t('settingsAbout')}
             </div>
           ) : null}
+          <DrawerEntry label={t('settingsCredits')} onClick={() => setCreditsOpen(true)} />
         </div>
       </Modal>
+      {moreOpen ? (
+        <Modal
+          title={t('settingsMore')}
+          closable
+          className={styles.dialog}
+          mainClassName={styles.drawerMain}
+          onClose={() => setMoreOpen(false)}
+        >
+          <MoreSettings hideTitle />
+        </Modal>
+      ) : null}
+      {creditsOpen ? (
+        <Modal
+          title={t('settingsCredits')}
+          closable
+          className={styles.dialog}
+          mainClassName={styles.drawerMain}
+          onClose={() => setCreditsOpen(false)}
+        >
+          <Credits />
+        </Modal>
+      ) : null}
       {historyImport.file ? <ImportConfirm historyImport={historyImport} /> : null}
       {historyImport.busy ? (
         <ImportProgress progress={historyImport.progress} onCancel={historyImport.abort} />
@@ -886,7 +916,7 @@ const ImportFromUrl = ({ disabled }: { disabled: boolean }) => {
  * 「更多」：大部分人用不到、但偶尔需要的选项放这里。
  * 目前有：开启手动压缩上下文、自定义模型（中转站）、会话整理模式（实验）。
  */
-const MoreSettings = () => {
+const MoreSettings = ({ hideTitle = false }: { hideTitle?: boolean }) => {
   const organizer = useSettings((state) => state.sessionOrganizer)
   const t = useTranslate()
   const manualCompress = useSettings((state) => state.manualCompress)
@@ -895,7 +925,7 @@ const MoreSettings = () => {
   const titleClassicExcludedModels = useSettings((state) => state.titleClassicExcludedModels)
   return (
     <>
-      <div className={styles.groupTitle}>{t('settingsMore')}</div>
+      {hideTitle ? null : <div className={styles.groupTitle}>{t('settingsMore')}</div>}
       <NetworkModelSetting />
       <SettingCell
         label={t('settingsTitleMode')}
@@ -1068,6 +1098,45 @@ const RelaySettings = () => {
         </div>
       ))}
     </>
+  )
+}
+
+/** 可点击的整行入口：点开对应抽屉（比一排排开关更省地方） */
+const DrawerEntry = ({
+  label,
+  description,
+  onClick,
+}: {
+  label: string
+  description?: string
+  onClick: () => void
+}) => (
+  <button type="button" className={clsx(styles.cell, styles.row, styles.drawerEntry)} onClick={onClick}>
+    <div className={styles.text}>
+      <div className={styles.label}>{label}</div>
+      {description ? <div className={styles.description}>{description}</div> : null}
+    </div>
+    <span className={styles.drawerChevron} aria-hidden="true">
+      ›
+    </span>
+  </button>
+)
+
+/** 开发者名单：放在设置最底部单独的抽屉里 */
+const Credits = () => {
+  const t = useTranslate()
+  return (
+    <div className={styles.credits}>
+      <div className={styles.creditsRow}>
+        <span className={styles.creditsRole}>{t('creditsAuthor')}</span>
+        <span className={styles.creditsName}>林砚</span>
+      </div>
+      <div className={styles.creditsRow}>
+        <span className={styles.creditsRole}>{t('creditsAssistants')}</span>
+        <span className={styles.creditsName}>呆(｡- .•)，玄止，正风赤帜，路人乙</span>
+      </div>
+      <p className={styles.creditsThanks}>{t('creditsThanks')}</p>
+    </div>
   )
 }
 

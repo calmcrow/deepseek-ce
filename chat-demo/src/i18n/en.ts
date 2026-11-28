@@ -282,6 +282,12 @@ export const en = {
   contextSummarizing: 'Asking the model for a recap…',
   contextSummaryFailed: 'Recap failed; the context was still compressed',
   settingsMore: 'More',
+  settingsMoreDescription:
+    'Less-used options: manual compression, title generation, custom web model, relay and more',
+  settingsCredits: 'Credits',
+  creditsAuthor: 'Author',
+  creditsAssistants: 'Contributors',
+  creditsThanks: 'Thanks to all of them for the repeated testing, feedback and development help!',
   settingsTitleClassicExcluded: 'Models without classic mode',
   settingsTitleClassicExcludedDescription: 'One model ID per line. These models do not send title.enabled, so titles stay as “New chat”.',
   settingsTitleClassicExcludedPlaceholder: 'e.g. deepseek-v4-pro',
