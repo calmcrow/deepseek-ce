@@ -111,8 +111,10 @@ type Settings = {
   titleByExtraRequest: boolean
   /** 启用标题生成：主请求带 title.enabled=true，服务端顺带生成（新接口） */
   titleServerEnabled: boolean
-  /** 标题生成方式：新接口（服务端 title.enabled）或旧接口（额外请求） */
+  /** 标题生成方式：经典（服务端 title.enabled）或回退（额外请求） */
   titleMode: 'server' | 'extra'
+  /** 不使用经典模式的模型清单（每行一个），这些模型不发 title.enabled */
+  titleClassicExcludedModels: string
   /** 使用自定义模型（中转站）：开启后不再走官方模型 */
   relayEnabled: boolean
   /** 中转站地址，例如 https://api.example.com（会自动补 /v1/chat/completions） */
@@ -142,6 +144,7 @@ const KEYS = {
   titleByExtraRequest: 'chat-demo:title-by-extra-request',
   titleServerEnabled: 'chat-demo:title-server-enabled',
   titleMode: 'chat-demo:title-mode',
+  titleClassicExcludedModels: 'chat-demo:title-classic-excluded-models',
   relayEnabled: 'chat-demo:relay-enabled',
   relayBaseUrl: 'chat-demo:relay-base-url',
   relayApiKey: 'chat-demo:relay-api-key',
@@ -351,6 +354,7 @@ export const useSettings = create<Settings>(() => {
     titleByExtraRequest: read(KEYS.titleByExtraRequest) === 'true',
     titleServerEnabled: read(KEYS.titleServerEnabled) !== 'false',
     titleMode: read(KEYS.titleMode) === 'extra' ? 'extra' : 'server',
+    titleClassicExcludedModels: read(KEYS.titleClassicExcludedModels) ?? 'deepseek-v4-pro',
     relayEnabled: read(KEYS.relayEnabled) === 'true',
     relayBaseUrl: read(KEYS.relayBaseUrl) ?? '',
     relayApiKey: read(KEYS.relayApiKey) ?? '',
@@ -441,10 +445,16 @@ export const setTitleServerEnabled = (titleServerEnabled: boolean) => {
   useSettings.setState({ titleServerEnabled })
 }
 
-/** 标题生成方式：新接口 / 旧接口（二选一） */
+/** 标题生成方式：经典 / 回退（二选一） */
 export const setTitleMode = (titleMode: 'server' | 'extra') => {
   write(KEYS.titleMode, titleMode)
   useSettings.setState({ titleMode })
+}
+
+/** 不使用经典模式的模型清单（每行一个） */
+export const setTitleClassicExcludedModels = (titleClassicExcludedModels: string) => {
+  write(KEYS.titleClassicExcludedModels, titleClassicExcludedModels)
+  useSettings.setState({ titleClassicExcludedModels })
 }
 
 /** 自定义模型（中转站）开关与参数 */

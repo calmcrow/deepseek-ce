@@ -1699,11 +1699,20 @@ const streamReply = async (sessionId: string, initial: AssistantMessage, request
                   system: buildSystemPrompt(sessionId),
                   // 标题：旧接口（额外请求）打开时关闭服务端标题；
                   // 新接口「启用标题生成」只对支持标题的模型、且只在会话第一次请求时带 title.enabled
-                  title: useSettings.getState().titleMode === 'extra'
-                    ? { enabled: false }
-                    : supportsServerTools(requestModel) && isFirstPrompt
+                  title: (() => {
+                    if (useSettings.getState().titleMode === 'extra') {
+                      return { enabled: false }
+                    }
+                    // 只在清单里明确填了该模型时才跳过经典；清单为空 = 不排除任何模型
+                    const excluded = useSettings
+                      .getState()
+                      .titleClassicExcludedModels.split(/\r?\n/)
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                    return !excluded.includes(requestModel) && isFirstPrompt
                       ? { enabled: true }
-                      : undefined,
+                      : undefined
+                  })(),
                   messages,
                   thinking: { type: initial.thinking ? 'enabled' : 'disabled' },
                   ...(SAFETY_CHECK ? { safety_check: SAFETY_CHECK } : {}),

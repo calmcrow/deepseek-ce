@@ -1,10 +1,10 @@
 import { useTranslate } from '../../i18n/index.js'
 import clsx from 'clsx'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { IconRefreshOutline16, IconWarningOutline16 } from '../base/icons.js'
 import { describeReply } from '../../services/chat/describe.js'
 import { canContinueReply } from '../../services/chat/reply.js'
-import { continueReply, regenerateReply } from '../../services/chat/store.js'
+import { continueReply, regenerateReply, useChatStore } from '../../services/chat/store.js'
 import { stopReadAloud } from '../../services/speech/readAloud.js'
 import type { AssistantMessage as AssistantMessageType } from '../../services/chat/types.js'
 import { openSettings } from '../settings/settingsDialogState.js'
@@ -25,6 +25,23 @@ import {
 import styles from './AssistantMessage.module.css'
 
 const TOP_UP_URL = 'https://platform.deepseek.com/top_up'
+
+const cnNumbers: Record<string, number> = {
+  一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
+  十: 10, 十一: 11, 十二: 12, 十三: 13, 十四: 14, 十五: 15,
+}
+
+/** 流式过程中也把（一）（二）实时转成官方可点击角标 */
+const convertCitations = (text: string, count: number): string =>
+  text
+    .replace(/[（(]([一二三四五六七八九十]{1,2})[)）]/g, (match, cn: string) => {
+      const index = cnNumbers[cn]
+      return index && index <= count ? `[citation:${index}]` : match
+    })
+    .replace(/\[(\d{1,2})\]/g, (match, num: string) => {
+      const index = Number(num)
+      return index >= 1 && index <= count ? `[citation:${index}]` : match
+    })
 
 export const AssistantMessage = memo(function AssistantMessage({
   sessionId,
@@ -50,6 +67,13 @@ export const AssistantMessage = memo(function AssistantMessage({
   // 安全拒绝：已生成的内容照常展示，中断说明由 describeReply 以提示形式补充。
   const refused = message.stopReason === 'refusal'
   const answer = view.answer
+  const citedPages = useChatStore((state) =>
+    state.webSearch && state.webSearch.sessionId === sessionId ? state.webSearch.pages.length : 0
+  )
+  const markdown = useMemo(
+    () => (answer ? convertCitations(answer.markdown, citedPages) : ''),
+    [answer, citedPages]
+  )
   const responseText = [answer?.text, notice?.presentation === 'response' ? notice.text : null]
     .filter(Boolean)
     .join('\n\n')
@@ -57,7 +81,7 @@ export const AssistantMessage = memo(function AssistantMessage({
   const waiting = streaming && view.steps.length === 0 && !view.answer && !message.thinking
   const summaryEntry = `${message.id}-summary`
   return (
-    <div className={styles.message}>
+    <div className={styles.message} data-message-id={message.id}>
       <ReplyArea
         message={message}
         view={view}
@@ -67,7 +91,7 @@ export const AssistantMessage = memo(function AssistantMessage({
       {answer ? (
         <Markdown
           className="ds-assistant-message-main-content"
-          content={answer.markdown}
+          content={markdown}
           loading={streaming}
           cacheKey={message.id}
           disableLink={false}
