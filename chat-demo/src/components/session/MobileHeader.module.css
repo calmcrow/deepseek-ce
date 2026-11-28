@@ -35,3 +35,13 @@
   text-overflow: ellipsis;
   cursor: pointer;
 }
+
+/* 顶栏按钮点完不要留高亮/焦点框 */
+.header button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header button:focus,
+.header button:focus-visible {
+  outline: none;
+}

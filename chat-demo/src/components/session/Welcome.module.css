@@ -57,7 +57,7 @@
   }
 }
 
-@media not all and (min-width: 768px) {
+@media not all and (min-width: 1024px) {
   .container {
     flex-direction: column;
   }
